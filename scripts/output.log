@@ -1,0 +1,99 @@
+psql:workshop.sql:15: NOTICE:  installing required extension "postgis"
+psql:workshop.sql:15: ERROR:  syntax error at or near "integer"
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+psql:workshop.sql:96: ERROR:  type "geometry" does not exist
+LINE 3:   shape_geom geometry('LINESTRING', 4326),
+                     ^
+CREATE INDEX
+CREATE TABLE
+psql:workshop.sql:120: ERROR:  type "geometry" does not exist
+LINE 12:   stop_geom geometry('POINT', 4326),
+                     ^
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+INSERT 0 2
+INSERT 0 3
+INSERT 0 4
+COPY 343
+COPY 555
+COPY 1386746
+COPY 68309
+COPY 1
+COPY 135
+COPY 94
+COPY 269019
+psql:workshop.sql:213: ERROR:  relation "stops" does not exist
+psql:workshop.sql:227: ERROR:  relation "shape_geoms" does not exist
+LINE 6: INSERT INTO shape_geoms
+                    ^
+psql:workshop.sql:230: ERROR:  relation "stops" does not exist
+LINE 1: UPDATE stops
+               ^
+psql:workshop.sql:233: NOTICE:  table "service_dates" does not exist, skipping
+DROP TABLE
+SELECT 2280
+psql:workshop.sql:256: NOTICE:  table "trip_stops" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+INSERT 0 1386746
+psql:workshop.sql:280: ERROR:  relation "shape_geoms" does not exist
+LINE 8:   FROM shape_geoms g, stops s
+               ^
+psql:workshop.sql:282: NOTICE:  table "trip_segs" does not exist, skipping
+DROP TABLE
+psql:workshop.sql:299: ERROR:  type "geometry" does not exist
+LINE 13:   seg_geom geometry,
+                    ^
+psql:workshop.sql:312: ERROR:  relation "trip_segs" does not exist
+LINE 1: INSERT INTO trip_segs (trip_id, route_id, service_id, stop1_...
+                    ^
+psql:workshop.sql:316: ERROR:  relation "trip_segs" does not exist
+LINE 1: UPDATE trip_segs t
+               ^
+psql:workshop.sql:318: ERROR:  relation "trip_segs" does not exist
+LINE 1: UPDATE trip_segs
+               ^
+psql:workshop.sql:320: NOTICE:  table "trip_points" does not exist, skipping
+DROP TABLE
+psql:workshop.sql:330: ERROR:  type "geometry" does not exist
+LINE 7:  point_geom geometry,
+                    ^
+psql:workshop.sql:355: ERROR:  relation "trip_points" does not exist
+LINE 1: INSERT INTO trip_points (trip_id, route_id, service_id, stop...
+                    ^
+psql:workshop.sql:357: NOTICE:  table "trips_input" does not exist, skipping
+DROP TABLE
+psql:workshop.sql:365: ERROR:  type "geometry" does not exist
+LINE 6:  point_geom geometry,
+                    ^
+psql:workshop.sql:371: ERROR:  relation "trips_input" does not exist
+LINE 1: INSERT INTO trips_input
+                    ^
+psql:workshop.sql:373: NOTICE:  table "trips_mdb" does not exist, skipping
+DROP TABLE
+psql:workshop.sql:381: ERROR:  type "tgeompoint" does not exist
+LINE 6:   trip tgeompoint,
+               ^
+psql:workshop.sql:387: ERROR:  relation "trips_mdb" does not exist
+LINE 1: INSERT INTO trips_mdb(trip_id, route_id, date, trip)
+                    ^
+psql:workshop.sql:391: ERROR:  relation "trips_mdb" does not exist
+LINE 1: INSERT INTO trips_mdb(trip_id, service_id, route_id, date, t...
+                    ^
+psql:workshop.sql:399: ERROR:  relation "stops" does not exist
+LINE 6: SELECT * FROM stops LIMIT 10;
+                      ^

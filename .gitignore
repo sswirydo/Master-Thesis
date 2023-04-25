@@ -1,3 +1,7 @@
+# Custom
+/data/
+/mobilitydb-workshop/
+
 # Prerequisites
 *.d
 
