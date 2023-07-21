@@ -17,13 +17,44 @@ reinit:
 	mkdir build
 	cd build && cmake .. && make && sudo make install && sudo service postgresql restart
 
+reinit-meos:
+	rm -rR build --force
+	mkdir build
+	cd build && cmake -DMEOS=on .. && make && sudo make install && sudo service postgresql restart
+
 compile:
 	cd build && make && sudo make install && sudo service postgresql restart
 
-test:
+query:
 	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
 	createdb -U $(DB_USER) $(DB_NAME)
-	psql -U $(DB_USER) -d $(DB_NAME) -f "Master-Thesis/scripts/test.sql"  # > output.log 2>&1
+	psql -U $(DB_USER) -d $(DB_NAME) -f "/home/szymon/Master-Thesis/scripts/query.sql"  # > output.log 2>&1
+
+
+sandbox:
+	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o sandbox sandbox.c -L/usr/local/lib -lmeos && ./sandbox
+
+sandbox-val:
+	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o sandbox sandbox.c -L/usr/local/lib -lmeos &&  valgrind --leak-check=yes ./sandbox
+
+sandbox-gdb:	
+	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o sandbox sandbox.c -L/usr/local/lib -lmeos &&  gdb ./sandbox
+
+
+test:
+	# ctest -N        # list all tests
+	cd build && ctest # run all tests
+	# ctest -R regex  # run all tests whose name match regex
+
+test-22:
+	cd build && ctest -R 022
 
 debug:
 	sudo gdb -p $(PID) # e.g. `make debug PID=3205`
+
+devdoc: #useless
+	mkdir build
+	cd build && cmake -DMEOS=on -DDOC_DEV=on .. && make -j && make doc_dev
+
+clean:
+	rm -rR build --force
