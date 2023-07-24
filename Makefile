@@ -1,6 +1,6 @@
 
 DB_NAME=mobility-test
-SQL_FILE=Master-Thesis/scripts/test.sql
+SQL_FILE=Master-Thesis/scripts/tochar.sql
 DB_USER=postgres
 
 all:
@@ -28,8 +28,11 @@ compile:
 query:
 	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
 	createdb -U $(DB_USER) $(DB_NAME)
-	psql -U $(DB_USER) -d $(DB_NAME) -f "/home/szymon/Master-Thesis/scripts/query.sql"  # > output.log 2>&1
+	psql -U $(DB_USER) -d $(DB_NAME) -f $(SQL_FILE)  # > output.log 2>&1
 
+
+example:
+	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o 01_meos_hello_world 01_meos_hello_world.c -L/usr/local/lib -lmeos && ./01_meos_hello_world
 
 sandbox:
 	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o sandbox sandbox.c -L/usr/local/lib -lmeos && ./sandbox
