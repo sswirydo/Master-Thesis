@@ -13,7 +13,7 @@
 
 const char* tochar_fmt[] = {
   "MON-DD-YYYY HH12:MIPM",
-  // "YYYY-MM-DD HH:MI:SS TZ",
+  "YYYY-MM-DD HH:MI:SS TZ",
   "YYYY-MM-DD SSSS",
   "YYYY-MM-DD SSSSS",
   "DAY Day day DY Dy dy MONTH Month month RM MON Mon mon",
@@ -27,7 +27,7 @@ const char* tochar_fmt[] = {
   "YYYY A.D. YYYY a.d. YYYY bc HH:MI:SS P.M. HH:MI:SS p.m. HH:MI:SS pm",
   "IYYY IYY IY I IW IDDD ID",
   "FMIYYY FMIYY FMIY FMI FMIW FMIDDD FMID",
-  // "TZH:TZM",
+  "TZH:TZM",
   "FF1 FF2 FF3 FF4 FF5 FF6  ff1 ff2 ff3 ff4 ff5 ff6  MS US",
 };
 
@@ -85,24 +85,20 @@ const char* dates_fmt[] = {
   // "1234567890ab 2010", "TMMONTH YYYY", // -- fail
 };
 
-// todo fixme (?) troubles to parse input with quotes ("") but might be SQL <-> C related
-//  i.e. there is no error but after-quote input seem ignored in output
-// (only affects to_timestamp, quotes are fine for to_char() family)
+
 const char* timestamps_fmt[] = {
   "0097/Feb/16 --> 08:14:30", "YYYY/Mon/DD --> HH:MI:SS",
   "97/2/16 8:14:30", "FMYYYY/FMMM/FMDD FMHH:FMMI:FMSS",
   "2011$03!18 23_38_15", "YYYY-MM-DD HH24:MI:SS",
   "1985 January 12", "YYYY FMMonth DD",
-  "1985 FMMonth 12", "YYYY \"FMMonth\" DD", // fixme (?) -> 12 ie DD ignored -> 1985-01-01
+  "1985 FMMonth 12", "YYYY \"FMMonth\" DD",
   "1985 \\ 12", "YYYY \\ DD", 
-  // "My birthday-> Year: 1976, Month: May, Day: 16", "\"My birthday-> Year:\" YYYY, \"Month:\" FMMonth, \"Day:\" DD",
+  "My birthday-> Year: 1976, Month: May, Day: 16", "\"My birthday-> Year:\" YYYY, \"Month:\" FMMonth, \"Day:\" DD",
   "1,582nd VIII 21", "Y,YYYth FMRM DD",
-  // "15 \"text between quote marks\" 98 54 45", "HH24 \"text between quote marks\" YY MI SS",
-  // "15 \"text between quote marks\" 98 54 45", "HH24 \"\\\"text between quote marks\\\"\" YY MI SS",
-  "15 text between quote marks 98 54 45", "HH24 \"\\text between quote marks\\\" YY MI SS",
+  // SELECT to_timestamp('15 "text between quote marks" 98 54 45',E'HH24 "\\"text between quote marks\\"" YY MI SS');
+  "15 \"text between quote marks\" 98 54 45", "HH24 \"\\\"text between quote marks\\\"\" YY MI SS",
+  "15 text between quote marks 98 54 45", "HH24 \"text between quote marks\" YY MI SS",
   "15 98 54 45", "HH24 YY MI SS",
-  // select to_timestamp('15 "text between quote marks" 98 54 45', E'HH24 "\\"text between quote marks\\"" YY MI SS');
-  // => 1998-01-01 15:54:45
   "05121445482000", "MMDDHH24MISSYYYY",
   "2000January09Sunday", "YYYYFMMonthDDFMDay",
   // "97/Feb/16", "YYMonDD", // invalid value (ok)
@@ -300,9 +296,6 @@ void test_to_date()
 }
 
 
-
-
-
 int main() {
   /* Initialize MEOS */
   meos_initialize(NULL);
@@ -310,7 +303,7 @@ int main() {
   test_timestamptz_to_char(); // OK
   test_timestamp_to_char(); // OK
   test_interval_to_char(); // OK
-  test_to_timestamp(); // OK (kind of except for quotes)
+  test_to_timestamp(); // OK
   test_to_date(); // OK
 
   /* Finalize MEOS */
