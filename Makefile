@@ -1,6 +1,7 @@
 
 DB_NAME=mobility-test
 SQL_FILE=Master-Thesis/scripts/query.sql
+GTFS_FILE=Master-Thesis/scripts/gtfs.sql
 DB_USER=postgres
 
 all:
@@ -35,6 +36,17 @@ query-clean:
 	createdb -U $(DB_USER) $(DB_NAME)
 	psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(SQL_FILE) -A -t -P pager=off 
 
+gtfs:
+	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
+	createdb -U $(DB_USER) $(DB_NAME)
+	# psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
+	psql -U $(DB_USER) -d $(DB_NAME) -f $(GTFS_FILE)
+
+gtfs-clean:
+	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
+	createdb -U $(DB_USER) $(DB_NAME)
+	psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
+
 example:
 	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o 01_meos_hello_world 01_meos_hello_world.c -L/usr/local/lib -lmeos && ./01_meos_hello_world
 
@@ -46,7 +58,6 @@ sandbox-val:
 
 sandbox-gdb:	
 	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o sandbox sandbox.c -L/usr/local/lib -lmeos &&  gdb ./sandbox
-
 
 test:
 	# ctest -N        # list all tests
@@ -62,6 +73,9 @@ debug:
 devdoc: #useless
 	mkdir build
 	cd build && cmake -DMEOS=on -DDOC_DEV=on .. && make -j && make doc_dev
+
+diff: # lists changes made by a merge (helpfull for debugging)
+	git diff $(shell git rev-parse HEAD)~ $(shell git rev-parse HEAD) > merge_diff.txt
 
 clean:
 	rm -rR build --force
