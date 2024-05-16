@@ -529,9 +529,59 @@ INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
   FROM trips_input
   GROUP BY trip_id, service_id, route_id, date;
 
-SELECT distinct date
-FROM trips_mdb
-ORDER BY date ASC;
+-- day format would require a more complex repeat behavior (repeat every day except on weekends)
+CREATE TABLE trips_mdb_day AS
+SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'day') as trip FROM trips_mdb;
+
+-- some trips may be repeated (at most 7 times)
+CREATE TABLE trips_mdb_week AS
+SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'week') as trip FROM trips_mdb;
+
+
+
+-- REPEATS DATES OVER THERE
+-- INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
+--   SELECT trip_id, route_id, t.service_id, d.date,
+--     shiftTime(trip, make_interval(days => d.date - t.date))
+--   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
+
+-- TODO FIXME WHY DOESNT THE INSERT WORK
+INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
+  SELECT 
+    trip_id as trip_id,
+    route_id as route_id,
+    t.service_id as service_id,
+    d.date as date,
+    shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint as trip
+  FROM 
+    trips_mdb_week t 
+    JOIN periodic_dates d
+      ON t.service_id = d.service_id 
+      AND t.date <> d.date;
+
+-- SELECT trip_id, route_id, t.service_id, d.date, 
+--   shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint
+-- FROM trips_mdb_week t
+--   JOIN periodic_dates d ON t.service_id = d.service_id AND t.date <> d.date
+-- WHERE t.service_id = '200039050' AND t.trip_id = '106624048200039050';
+
+
+-- SELECT * FROM periodic_dates WHERE service_id = '200039050';
+
+
+-- SELECT count(service_id), date
+-- FROM trips_mdb_week
+-- WHERE service_id = '200039050'
+-- GROUP BY service_id, date;
+
+SELECT * FROM trips_mdb_week
+WHERE service_id = '200039050' AND trip_id = '106624048200039050';
+
+
+
+-- SELECT distinct date
+-- FROM trips_mdb
+-- ORDER BY date ASC;
 --     date
 -- ------------
 --  2000-01-01
@@ -541,9 +591,9 @@ ORDER BY date ASC;
 -- SELECT trip
 -- FROM trips_mdb
 -- LIMIT 1;
-SELECT getTime(trip) as ts
-FROM trips_mdb
-LIMIT 1;
+-- SELECT getTime(trip) as ts
+-- FROM trips_mdb
+-- LIMIT 1;
 -- ...
 -- ts|{[2000-01-07 23:22:28+01, 2000-01-07 23:56:58+01]}
 -- ts|{[2000-01-07 23:23:14+01, 2000-01-07 23:41:53+01]}
@@ -566,11 +616,6 @@ LIMIT 1;
 -- NOTE+FIXME:
 -- shouldn't (/can) timestamps be in [2000-01-01, 2000-01-02] rather than [2000-01-01, 2000-01-08]?
 
--- REPEATS DATES OVER THERE
--- INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
---   SELECT trip_id, route_id, t.service_id, d.date,
---     shiftTime(trip, make_interval(days => d.date - t.date))
---   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
 
 -- SELECT distinct date
 -- FROM trips_mdb
@@ -603,7 +648,7 @@ LIMIT 1;
 -- from temp_2;
 
 
-SELECT ST_Intersects('POINT(0 0)'::geometry, 'LINESTRING ( 0 0, 0 2 )'::geometry);
+-- SELECT ST_Intersects('POINT(0 0)'::geometry, 'LINESTRING ( 0 0, 0 2 )'::geometry);
 
 
 -- SELECT SRID(trip) FROM trips_mdb LIMIT 10; 

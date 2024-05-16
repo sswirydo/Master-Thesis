@@ -27,9 +27,20 @@ SELECT * FROM Department;
 
 UPDATE Department
 SET NoEmps = setPeriodicType(NoEmps, 'interval');
+SELECT NoEmps FROM Department;
 
-SELECT NoEmps
-FROM Department;
+ALTER TABLE Department ALTER COLUMN NoEmps TYPE tint;
+SELECT NoEmps FROM Department;
+
+ALTER TABLE Department ALTER COLUMN NoEmps TYPE pint;
+SELECT NoEmps FROM Department;
+
+SELECT 2+2;
+
+
+
+
+
 
 
 
