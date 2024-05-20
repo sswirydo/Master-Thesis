@@ -529,6 +529,8 @@ INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
   FROM trips_input
   GROUP BY trip_id, service_id, route_id, date;
 
+-- UPDATE trips_mdb SET trip = shiftTime(trip, '2 weeks');
+
 -- day format would require a more complex repeat behavior (repeat every day except on weekends)
 CREATE TABLE trips_mdb_day AS
 SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'day') as trip FROM trips_mdb;
@@ -546,18 +548,18 @@ SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'w
 --   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
 
 -- TODO FIXME WHY DOESNT THE INSERT WORK
-INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
-  SELECT 
-    trip_id as trip_id,
-    route_id as route_id,
-    t.service_id as service_id,
-    d.date as date,
-    shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint as trip
-  FROM 
-    trips_mdb_week t 
-    JOIN periodic_dates d
-      ON t.service_id = d.service_id 
-      AND t.date <> d.date;
+-- INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
+--   SELECT 
+--     trip_id as trip_id,
+--     route_id as route_id,
+--     t.service_id as service_id,
+--     d.date as date,
+--     shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint as trip
+--   FROM 
+--     trips_mdb_week t 
+--     JOIN periodic_dates d
+--       ON t.service_id = d.service_id 
+--       AND t.date <> d.date;
 
 -- SELECT trip_id, route_id, t.service_id, d.date, 
 --   shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint
@@ -573,6 +575,9 @@ INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
 -- FROM trips_mdb_week
 -- WHERE service_id = '200039050'
 -- GROUP BY service_id, date;
+
+SELECT * FROM trips_mdb
+WHERE service_id = '200039050' AND trip_id = '106624048200039050';
 
 SELECT * FROM trips_mdb_week
 WHERE service_id = '200039050' AND trip_id = '106624048200039050';

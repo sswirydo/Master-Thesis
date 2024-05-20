@@ -37,6 +37,15 @@ SELECT NoEmps FROM Department;
 
 SELECT 2+2;
 
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'day'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'week'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 CET)'), 'week'); -- NOT OK: ONLY WORKS WITH UTC ATM
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:59:59 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-31 23:59:59 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:00:00 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2001-01-01 00:00:00 UTC)'), 'year'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-12-31 23:59:59 UTC)'), 'year'); -- OK
+
 
 
 
