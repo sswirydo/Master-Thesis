@@ -547,25 +547,19 @@ SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'w
 --     shiftTime(trip, make_interval(days => d.date - t.date))
 --   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
 
--- TODO FIXME WHY DOESNT THE INSERT WORK
--- INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
---   SELECT 
---     trip_id as trip_id,
---     route_id as route_id,
---     t.service_id as service_id,
---     d.date as date,
---     shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint as trip
---   FROM 
---     trips_mdb_week t 
---     JOIN periodic_dates d
---       ON t.service_id = d.service_id 
---       AND t.date <> d.date;
 
--- SELECT trip_id, route_id, t.service_id, d.date, 
---   shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint
--- FROM trips_mdb_week t
---   JOIN periodic_dates d ON t.service_id = d.service_id AND t.date <> d.date
--- WHERE t.service_id = '200039050' AND t.trip_id = '106624048200039050';
+INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
+  SELECT 
+    trip_id as trip_id,
+    t.service_id as service_id,
+    route_id as route_id,
+    d.date as date,
+    shiftTime(trip::tgeompoint, make_interval(days => d.date - t.date))::pgeompoint as trip
+  FROM 
+    trips_mdb_week t 
+    JOIN periodic_dates d
+      ON t.service_id = d.service_id 
+      AND t.date <> d.date;
 
 
 -- SELECT * FROM periodic_dates WHERE service_id = '200039050';
@@ -580,8 +574,12 @@ SELECT * FROM trips_mdb
 WHERE service_id = '200039050' AND trip_id = '106624048200039050';
 
 SELECT * FROM trips_mdb_week
-WHERE service_id = '200039050' AND trip_id = '106624048200039050';
+WHERE service_id = '200039050' AND trip_id = '106624048200039050'
+ORDER BY date;
 
+SELECT 10+1;
+SELECT * FROM periodic_dates d WHERE service_id = '200039050'; 
+SELECT 10+2;
 
 
 -- SELECT distinct date
