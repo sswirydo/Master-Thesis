@@ -270,62 +270,48 @@ GROUP BY shape_id;
 UPDATE stops
 SET stop_geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326);
 
--------------------
--- PROBLEMS HERE --
--------------------
 
--- CREATE TABLE calendar_transformed AS (
---   SELECT
---     service_id,
---     ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday] as days,
---     start_date,
---     end_date,
---     extract(isodow from start_date) as start_date_dow,
---     extract(isodow from end_date) as end_date_dow
---   FROM calendar
--- );
 
--- fixme: it is probably better (for users) to input actual dates and transform it into the correct periodic format later based on first elem of the sequence etc.
 CREATE TABLE periodic_dates AS (
-  SELECT service_id, date_trunc('day', d)::date AS date, extract(isodow from d) AS dow
+  SELECT service_id, date_trunc('day', d)::date AS date
     FROM calendar c, generate_series('2000-01-01'::date, '2000-01-07'::date, '1 day'::interval) AS d
     WHERE (
-      (monday = 1 AND extract(isodow FROM d) = 6) OR -- fixme
-      (tuesday = 1 AND extract(isodow FROM d) = 7) OR
-      (wednesday = 1 AND extract(isodow FROM d) = 1) OR
-      (thursday = 1 AND extract(isodow FROM d) = 2) OR
-      (friday = 1 AND extract(isodow FROM d) = 3) OR
-      (saturday = 1 AND extract(isodow FROM d) = 4) OR
-      (sunday = 1 AND extract(isodow FROM d) = 5)
+      (monday = 1 AND d = '2000-01-01') OR
+      (tuesday = 1 AND d = '2000-01-02') OR
+      (wednesday = 1 AND d = '2000-01-03') OR
+      (thursday = 1 AND d = '2000-01-04') OR
+      (friday = 1 AND d = '2000-01-05') OR
+      (saturday = 1 AND d = '2000-01-06') OR
+      (sunday = 1 AND d = '2000-01-07')
     )
 );
 
-CREATE TABLE service_dates AS (
-  SELECT service_id, date_trunc('day', d)::date AS date
-    FROM calendar c, generate_series(start_date, end_date, '1 day'::interval) AS d
-    WHERE (
-      (monday = 1 AND extract(isodow FROM d) = 1) OR
-      (tuesday = 1 AND extract(isodow FROM d) = 2) OR
-      (wednesday = 1 AND extract(isodow FROM d) = 3) OR
-      (thursday = 1 AND extract(isodow FROM d) = 4) OR
-      (friday = 1 AND extract(isodow FROM d) = 5) OR
-      (saturday = 1 AND extract(isodow FROM d) = 6) OR
-      (sunday = 1 AND extract(isodow FROM d) = 7)
-    )
-  EXCEPT
-    SELECT service_id, date
-      FROM calendar_dates WHERE exception_type = 2
-    UNION
-    SELECT c.service_id, date
-      FROM calendar c JOIN calendar_dates d ON c.service_id = d.service_id
-      WHERE exception_type = 1 AND start_date <= date AND date <= end_date
-);
-
+-- CREATE TABLE service_dates AS (
+--   SELECT service_id, date_trunc('day', d)::date AS date
+--     FROM calendar c, generate_series(start_date, end_date, '1 day'::interval) AS d
+--     WHERE (
+--       (monday = 1 AND extract(isodow FROM d) = 1) OR
+--       (tuesday = 1 AND extract(isodow FROM d) = 2) OR
+--       (wednesday = 1 AND extract(isodow FROM d) = 3) OR
+--       (thursday = 1 AND extract(isodow FROM d) = 4) OR
+--       (friday = 1 AND extract(isodow FROM d) = 5) OR
+--       (saturday = 1 AND extract(isodow FROM d) = 6) OR
+--       (sunday = 1 AND extract(isodow FROM d) = 7)
+--     )
+--   EXCEPT
+--     SELECT service_id, date
+--       FROM calendar_dates WHERE exception_type = 2
+--     UNION
+--     SELECT c.service_id, date
+--       FROM calendar c JOIN calendar_dates d ON c.service_id = d.service_id
+--       WHERE exception_type = 1 AND start_date <= date AND date <= end_date
+-- );
 
 
 
 CREATE TABLE trip_stops (
   trip_id text,
+  direction_id text,
   stop_sequence integer,
   no_stops integer,
   route_id text,
@@ -394,57 +380,6 @@ INSERT INTO trip_segs (trip_id, route_id, service_id, stop1_sequence, stop2_sequ
   UPDATE trip_segs
     SET seg_length = ST_Length(seg_geom), no_points = ST_NumPoints(seg_geom);
 
-
--- SELECT trip_id,
---   route_id,
---   service_id,
---   stop1_sequence,
---   stop2_sequence,
---   no_stops,
---   shape_id,
---   stop1_arrival_time,
---   stop2_arrival_time,
---   perc1,
---   perc2,
---   ST_AsText(seg_geom),
---   seg_length,
---   no_points
---   FROM trip_segs
---   ORDER BY trip_id, stop1_sequence
---   LIMIT 10;
-
--- Checks if there exist a seg_geom that is different for the same service_id but different trip_id
--- Answer: yes. For instance if the metro line 5 stop at delta (warehouse) to end its work day
--- SELECT *
--- FROM trip_segs t1 CROSS JOIN trip_segs t2
--- WHERE t1.service_id = t2.service_id
---   AND t1.trip_id != t2.trip_id
---   AND t1.stop1_sequence = t2.stop1_sequence
---   AND NOT ST_Equals(t1.seg_geom, t2.seg_geom)
--- ORDER BY t1.service_id, t1.trip_id
--- LIMIT 10;
-
-/*
-QUESTION, DO WE REALLY NEED TO CREATE THOSE SEGMENTED LINES FOR TEMPORALS? 
-ARENT (stop_id, arrival_time) SUFFICIENT FOR ANALYSIS ? (tint)
-I GUESS BOTH COULD WORK ?
-BUT WHAT IS THE ADVANTAGE OF USING LINE STRINGS DIRECTLY ?
-PERHAPS BY CREATING TEMPORALS, WE LOSE THE GEOGRAPHY INFORMATION?
-
-ACTUALLY. A DISADVENTAGE OF tint IS THAT WE CANNOT INTERPOLATE
-WHERAS IT IS POSSIBLE USING GEOMETRIES
-
-BUT, ARENT TRIP POINT SUFFICIENT IN THAT CASE ? DO WE REALLY WANT/NEED TO CREATE LINE SEGMENTS?
-MOREOVER, NOTE THAT THOSE LINES DONT (a priori) FOLLOW THE ACTUAL STREETS. 
-(perhaps they do, I don't know if this is already implemented in mobilitydb, investigate)
-WAIT
-BUT WE ARE GIVEN ROUTE SHAPES THAT ACTUALLY CONTAIN THOSE -> MAPPING TO STREETS IS NOT NEEDED
-THUS
-CANNOT WE JUST SOMEHOW DIVIDE THOSE ROUTE GEOMETRIES INTO SEGMENTS 
-RATHER THAN APPROXIMATELY CREATING SEGMENTS FROM JUST POINTS ?
--> that's what we do here, those are not approximate :D
-
-*/
 
 -- extracts points from segments (simplifies segments into points)
 CREATE TABLE trip_points (
@@ -518,26 +453,27 @@ INSERT INTO trips_input
 
 CREATE TABLE trips_mdb (
 	trip_id text NOT NULL,
+  direction_id text NOT NULL,
 	service_id text NOT NULL,
 	route_id text NOT NULL,
 	date date NOT NULL,
 	trip tgeompoint,
 	PRIMARY KEY (trip_id, date)
 );
-INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
-  SELECT trip_id, service_id, route_id, date, tgeompointSeq(array_agg(tgeompoint(point_geom, t) ORDER BY T))
-  FROM trips_input
-  GROUP BY trip_id, service_id, route_id, date;
+INSERT INTO trips_mdb(trip_id, direction_id, service_id, route_id, date, trip)
+  SELECT ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, date, tgeompointSeq(array_agg(tgeompoint(ti.point_geom, ti.t) ORDER BY T))
+  FROM trips_input ti JOIN trips tr ON ti.trip_id = tr.trip_id
+  GROUP BY ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, ti.date;
 
 -- UPDATE trips_mdb SET trip = shiftTime(trip, '2 weeks');
 
 -- day format would require a more complex repeat behavior (repeat every day except on weekends)
 CREATE TABLE trips_mdb_day AS
-SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'day') as trip FROM trips_mdb;
+SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'day') as trip FROM trips_mdb;
 
 -- some trips may be repeated (at most 7 times)
 CREATE TABLE trips_mdb_week AS
-SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'week') as trip FROM trips_mdb;
+SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'week') as trip FROM trips_mdb;
 
 
 
@@ -547,10 +483,29 @@ SELECT trip_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'w
 --     shiftTime(trip, make_interval(days => d.date - t.date))
 --   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
 
+-- REPEATS A TRIP FOR EACH DAY OF WEEK THE SERVICE RUNS
+-- e.g. from only (Mon) to (Mon, Tue, Wed, Thu, Fri)
 
-INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
+SELECT route_id, service_id, date, direction_id, count(*) FROM trips_mdb_week
+GROUP BY route_id, service_id, date, direction_id
+ORDER BY route_id, service_id, direction_id, date;
+-- route_id|1
+-- service_id|200039050
+-- date|2000-01-01
+-- direction_id|0
+-- count|175
+
+SELECT 2+2;
+
+SELECT route_id, direction_id, count(*) FROM trips_mdb_week
+GROUP BY route_id, direction_id
+ORDER BY route_id;
+
+
+INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", "date", "trip")
   SELECT 
     trip_id as trip_id,
+    direction_id as direction_id,
     t.service_id as service_id,
     route_id as route_id,
     d.date as date,
@@ -562,24 +517,57 @@ INSERT INTO trips_mdb_week("trip_id", "service_id", "route_id", "date", "trip")
       AND t.date <> d.date;
 
 
--- SELECT * FROM periodic_dates WHERE service_id = '200039050';
 
-
--- SELECT count(service_id), date
--- FROM trips_mdb_week
--- WHERE service_id = '200039050'
--- GROUP BY service_id, date;
-
-SELECT * FROM trips_mdb
-WHERE service_id = '200039050' AND trip_id = '106624048200039050';
-
-SELECT * FROM trips_mdb_week
-WHERE service_id = '200039050' AND trip_id = '106624048200039050'
+SELECT trip_id, direction_id, service_id, route_id, date, asText(trip::tgeompoint)
+FROM trips_mdb_week
+WHERE trip_id = '106624048200039050'
 ORDER BY date;
 
-SELECT 10+1;
-SELECT * FROM periodic_dates d WHERE service_id = '200039050'; 
-SELECT 10+2;
+
+
+-- SELECT 10+1;
+-- SELECT * FROM periodic_dates d WHERE service_id = '200039050'; 
+-- SELECT 10+2;
+
+-- SELECT anchor(trip, pmode('1 week', 1000, true, '[2024-06-01, 2024-06-30]')) as result
+-- FROM trips_mdb_week
+-- WHERE trip_id = '106624048200039050';
+ 
+-- SELECT anchor(trip, pmode('1 week'::interval, NULL, true, span(c.start_date, c.end_date, true, true)::tstzspan))
+-- FROM trips_mdb_week t
+-- JOIN calendar c ON t.service_id = c.service_id
+-- WHERE trip_id = '106624048200039050';
+
+
+-- SELECT anchor(trip, pmode('1 week', 0, true, '[2019-11-01, 2019-12-01]'))
+-- CREATE VIEW final_sequences AS
+--   WITH anchored_trips1 AS (
+--     SELECT 
+--       trip_id, direction_id, service_id, route_id, -- date,
+--       anchor(trip, pmode('1 week', 0, true, tstzspan(cal.start_date, cal.end_date))) as trip
+--     FROM trips_mdb_week mdb JOIN calendar cal ON mdb.service_id = cal.service_id
+--   WHERE service_id = '200039050' AND trip_id = '106624048200039050'
+--   ),
+--   WITH anchored_trips2 AS (
+--     SELECT
+--       trip_id, direction_id, service_id, route_id,
+--       startTimestamp(trip),
+--       trip
+--     FROM anchored_trips1
+--   ),
+--   WITH 
+  
+
+
+
+
+
+
+
+/*****************************************************************************
+ *  ARCHIVES
+*****************************************************************************/
+
 
 
 -- SELECT distinct date
@@ -671,3 +659,37 @@ SELECT 10+2;
 -- FROM stop_times 
 -- ORDER BY trip_id, arrival_time
 -- LIMIT 10;
+
+
+-- Checks if there exist a seg_geom that is different for the same service_id but different trip_id
+-- Answer: yes. For instance if the metro line 5 stop at delta (warehouse) to end its work day
+-- SELECT *
+-- FROM trip_segs t1 CROSS JOIN trip_segs t2
+-- WHERE t1.service_id = t2.service_id
+--   AND t1.trip_id != t2.trip_id
+--   AND t1.stop1_sequence = t2.stop1_sequence
+--   AND NOT ST_Equals(t1.seg_geom, t2.seg_geom)
+-- ORDER BY t1.service_id, t1.trip_id
+-- LIMIT 10;
+
+/*
+QUESTION, DO WE REALLY NEED TO CREATE THOSE SEGMENTED LINES FOR TEMPORALS? 
+ARENT (stop_id, arrival_time) SUFFICIENT FOR ANALYSIS ? (tint)
+I GUESS BOTH COULD WORK ?
+BUT WHAT IS THE ADVANTAGE OF USING LINE STRINGS DIRECTLY ?
+PERHAPS BY CREATING TEMPORALS, WE LOSE THE GEOGRAPHY INFORMATION?
+
+ACTUALLY. A DISADVENTAGE OF tint IS THAT WE CANNOT INTERPOLATE
+WHERAS IT IS POSSIBLE USING GEOMETRIES
+
+BUT, ARENT TRIP POINT SUFFICIENT IN THAT CASE ? DO WE REALLY WANT/NEED TO CREATE LINE SEGMENTS?
+MOREOVER, NOTE THAT THOSE LINES DONT (a priori) FOLLOW THE ACTUAL STREETS. 
+(perhaps they do, I don't know if this is already implemented in mobilitydb, investigate)
+WAIT
+BUT WE ARE GIVEN ROUTE SHAPES THAT ACTUALLY CONTAIN THOSE -> MAPPING TO STREETS IS NOT NEEDED
+THUS
+CANNOT WE JUST SOMEHOW DIVIDE THOSE ROUTE GEOMETRIES INTO SEGMENTS 
+RATHER THAN APPROXIMATELY CREATING SEGMENTS FROM JUST POINTS ?
+-> that's what we do here, those are not approximate :D
+
+*/

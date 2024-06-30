@@ -89,3 +89,17 @@ SELECT pint('Periodic=Interval;[1#0, 2#30days, 3#1 months 30 days, 4#2 months 30
 -- SELECT anchor(pint('Periodic=Month;[1#28 00:00:00, 2#29 00:00:00, 3#30 00:00:00]'), pmode('1 month', 100), '2001-01-01', '2004-01-01', false);
 
 SELECT anchor(pint('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-03 UTC)'), pmode('2 days', 100), '2019-11-01', '2019-12-01', false);
+
+
+
+
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'day'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'week'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:00:00 CET)'), 'week'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-07 23:59:59 CET)'), 'week'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:59:59 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-31 23:59:59 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:00:00 UTC)'), 'month'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2001-01-01 00:00:00 UTC)'), 'year'); -- OK
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-12-31 23:59:59 UTC)'), 'year'); -- OK
+

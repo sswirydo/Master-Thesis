@@ -37,17 +37,80 @@ SELECT NoEmps FROM Department;
 
 SELECT 2+2;
 
+
+CREATE TABLE calendar_dates (
+  service_id text,
+  date date NOT NULL,
+  exception_type int
+);
+COPY calendar_dates(service_id,date,exception_type)
+  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar_dates.txt' DELIMITER ',' CSV HEADER;
+
+
+CREATE VIEW exceptions AS 
+  SELECT set(array_agg(c.date::timestamptz)) FROM calendar_dates c;
+
+CREATE VIEW points AS
+  SELECT pgeompoint('[Point(0 0)#2000-01-01, 
+                      Point(0 1)#2000-01-02, 
+                      Point(0 2)#2000-01-03, 
+                      Point(0 3)#2000-01-04,
+                      Point(0 4)#2000-01-05]');
+
+
+SELECT anchor(pint('[1#2000-01-01 CET, 2#2000-01-02 CET]'), pmode('1 week', 4, true, '[2019-01-01, 2019-12-01]'));
+
+
 SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'day'); -- OK
 SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'week'); -- OK
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 CET)'), 'week'); -- NOT OK: ONLY WORKS WITH UTC ATM
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:59:59 UTC)'), 'month'); -- OK
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-31 23:59:59 UTC)'), 'month'); -- OK
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:00:00 UTC)'), 'month'); -- OK
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2001-01-01 00:00:00 UTC)'), 'year'); -- OK
-SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-12-31 23:59:59 UTC)'), 'year'); -- OK
+
+SELECT pint('Periodic=Day;[1#08:00:00, 2#10:00:00, 3#12:00:00]');
+
+SELECT 2+2;
+
+SELECT timestamptz '2000-01-31' + interval '31 days';
+SELECT timestamptz '2000-01-31' + interval '1 month';
+SELECT timestamptz '2000-01-29' + interval '1 month';
+
+SELECT setPeriodicType(pint('Periodic=Interval;[1#0, 2#31 days, 3#62 days]'), 'none');
+SELECT setPeriodicType(pint('Periodic=Interval;[1#0, 2#1 month, 3#2 months]'), 'none');
 
 
+SELECT tint '{20@2024-03-01, 25@2024-03-06, 30@2024-04-01}';
+SELECT tint 'Interp=Step; (20@2024-03-01, 25@2024-03-06, 30@2024-04-01]';
+SELECT tint '(20@2024-03-01, 25@2024-03-06, 30@2024-04-01]';
 
+SELECT tint '25@2024-03-06';
+
+CREATE VIEW test1 AS (
+SELECT ttext '{[Delta@2024-03-01 08:00:00, ULB@2024-03-01 08:30:00],
+  [Buyl@2024-03-01 08:45:00, VUB@2024-03-01 09:00:00]}' as trip
+);
+
+SELECT valueAtTimestamp(trip, '2024-03-01 11:00:00') FROM test1;
+SELECT valueAtTimestamp(trip, '2024-03-01 13:00:00') FROM test1;
+
+
+SELECT 
+    DATE_TRUNC('month', CURRENT_DATE) + i_day * '1 day'::interval AS date
+FROM generate_series(0, 6) AS i_day
+WHERE EXTRACT(dow FROM DATE_TRUNC('month', CURRENT_DATE) + i_day * '1 day'::interval) = 1;
+
+
+SELECT tgeompoint '[Point(0 0)@2001-01-01, Point(1 1)@2001-01-02)' <-> tgeompoint '[Point(0 1)@2001-01-01, Point(1 2)@2001-01-02)';
+
+SELECT tgeompoint '[Point(0 0)@2001-01-01, Point(1 1)@2001-01-02]' <-> tgeompoint '[Point(0 1)@2001-01-02, Point(1 2)@2001-01-03]';
+
+
+SELECT valueAtTimestamp(tfloat '(20@2024-03-01, 25@2024-03-06, 30@2024-03-11]', '2024-03-03');
+SELECT tfloat '(20@2024-03-01, 25@2024-03-06, 30@2024-03-11]';
+
+-- CREATE FUNCTION add_numbers(x integer, y integer)
+-- RETURNS integer as $$ 
+--     SELECT x + y; 
+-- $$ LANGUAGE SQL; 
+
+-- SELECT add_numbers(2, 2)
 
 
 
