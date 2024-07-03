@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS mobilitydb CASCADE;
 
 SELECT pmode('2 days', 10, true, '[2019-11-01, 2019-12-01]');
 
-SELECT anchor(pint('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-03 UTC)'), pmode('2 days', 10, true, '[2019-11-01, 2019-12-01]'));
+-- SELECT anchor(pint('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-03 UTC)'), pmode('2 days', 10, true, '[2019-11-01, 2019-12-01]'));
 
 
 SELECT tstzspanset '{[2001-01-01 08:00:00, 2001-01-01 08:10:00),
@@ -58,7 +58,7 @@ CREATE VIEW points AS
                       Point(0 4)#2000-01-05]');
 
 
-SELECT anchor(pint('[1#2000-01-01 CET, 2#2000-01-02 CET]'), pmode('1 week', 4, true, '[2019-01-01, 2019-12-01]'));
+-- SELECT anchor(pint('[1#2000-01-01 CET, 2#2000-01-02 CET]'), pmode('1 week', 4, true, '[2019-01-01, 2019-12-01]'));
 
 
 SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'day'); -- OK
@@ -111,6 +111,71 @@ SELECT tfloat '(20@2024-03-01, 25@2024-03-06, 30@2024-03-11]';
 -- $$ LANGUAGE SQL; 
 
 -- SELECT add_numbers(2, 2)
+
+
+SELECT asText(tgeompoint '[Point(0 0)@2024-01-01 10:00, Point(1 1)@2024-06-01 10:00]');
+
+
+SELECT '2000-01-01 08:00:00'::timestamptz;
+-- timestamptz|2000-01-01 08:00:00+01
+SELECT '2000-06-01 08:00:00'::timestamptz;
+-- timestamptz|2000-06-01 08:00:00+02
+
+SELECT '2000-01-01 08:00:00'::timestamptz AT TIME ZONE 'UTC';
+-- timezone|2000-01-01 07:00:00
+SELECT '2000-06-01 08:00:00'::timestamptz AT TIME ZONE 'UTC';
+-- timezone|2000-06-01 06:00:00
+
+SELECT '2000-01-01 08:00:00'::timestamptz AT TIME ZONE 'UTC' AT TIME ZONE 'CEST';
+
+SELECT '2000-06-01 07:00:00 UTC'::timestamptz AT TIME ZONE 'CEST';
+-- timestamptz|2000-01-01 08:00:00+01
+
+SELECT '2024-06-30 00:00:00 CEST'::timestamptz AT TIME ZONE 'UTC';
+
+-- SELECT ('2024-06-29 22:00:00 UTC'::integer + '2000-01-01 10:00:00 CET'::integer)::timestamptz;
+
+SELECT asText(tgeompoint '[Point(0 0)@2000-10-29 01:59, Point(1 1)@2000-10-29 03:00]');
+SELECT duration(tgeompoint '[Point(0 0)@2000-10-29 01:59, Point(1 1)@2000-10-29 02:00]');
+
+SELECT duration(tgeompoint '[Point(0 0)@2000-01-01 00:00:00 CEST, Point(1 1)@2000-10-28 10:00:00]');
+
+SELECT duration(tgeompoint '[Point(0 0)@2000-01-01 10:00, Point(1 1)@2000-06-01 10:00]');
+SELECT duration(tgeompoint '[Point(0 0)@2000-01-01 00:00:00 CET, Point(1 1)@2000-06-01 10:00]');
+
+
+SELECT '2000-01-01 10:00:00'::timestamptz AT TIME ZONE 'UTC';
+
+SELECT ('2000-01-01 10:00:00+15'::timestamptz)::timestamp;
+SHOW timezone;
+SELECT '2000-01-01 10:00:00+15'::timestamp;
+
+
+SELECT setPeriodicType(pint('Periodic=Week; [1#Monday 10:00:00, 2#Tuesday 10:00:00]'), 'none');
+SELECT setPeriodicType(pint('Periodic=Week; [1#Monday 10:00:00, 2#Tuesday 10:00:00]'), 'none');
+
+SELECT pint('Periodic=Week; [1#Monday 10:00:00+05, 2#Tuesday 10:00:00]');
+SELECT setPeriodicType(pint('Periodic=Week; [1#Monday 10:00:00+05, 2#Tuesday 10:00:00]'), 'none');
+
+-- SELECT pint('Periodic=Year;[10#Jan 05 10:00:00, 12#Feb 29 10:00:00, 12#Oct 01 10:00:00)');
+-- SELECT setPeriodicType(pint('Periodic=Year;[10#Jan 05 10:00:00, 12#Feb 29 10:00:00, 12#Oct 01 10:00:00)'), 'none');
+
+SELECT setPeriodicType(pint('Periodic=Interval; [1#0 days 10:00:00, 2#152 days 10:00:00]'), 'none');
+
+SELECT '[2019-11-01, 2019-12-01]';
+SELECT '[2019-11-01, 2019-12-01]'::tstzspan;
+SELECT span('2019-11-01'::timestamptz, '2019-12-01'::timestamptz, true, true)::tstzspan;
+
+-- SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 day', 20, true, '[2019-11-01, 2019-12-01]'::tstzspan));
+SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 20, true, '[2019-11-01, 2019-12-01]'::tstzspan));
+
+SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, true, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
+SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, false, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
+
+SELECT anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan, '1 hour', true);
+
+
+SELECT anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2019-11-01, 2019-11-29 13:45:00]'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1]);
 
 
 

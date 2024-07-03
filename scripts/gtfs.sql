@@ -59,6 +59,9 @@ if they are the same perhaps we can compute the geometry once per service rather
 */
 
 
+/*
+ * All of the above is probably already fixed or does not matter.
+ */
 
 
 
@@ -109,19 +112,19 @@ CREATE TABLE calendar_dates (
 CREATE INDEX calendar_dates_dateidx ON calendar_dates (date);
 
 -- (optional)
-CREATE TABLE route_types (
-	route_type int PRIMARY KEY,
-	description text
-);
+-- CREATE TABLE route_types (
+-- 	route_type int PRIMARY KEY,
+-- 	description text
+-- );
 
 CREATE TABLE routes (
   route_id text,
   route_short_name text DEFAULT '',
   route_long_name text DEFAULT '',
   route_desc text DEFAULT '',
-	route_type int REFERENCES route_types(route_type),
+	route_type int, -- REFERENCES route_types(route_type),
   route_url text,
-  route_color text,
+  route_color text DEFAULT '',
   route_text_color text,
   CONSTRAINT routes_pkey PRIMARY KEY (route_id)
 );
@@ -130,7 +133,8 @@ CREATE TABLE shapes (
   shape_id text NOT NULL,
   shape_pt_lat double precision NOT NULL,
   shape_pt_lon double precision NOT NULL,
-  shape_pt_sequence int NOT NULL
+  shape_pt_sequence int NOT NULL,
+  shape_dist_traveled text DEFAULT '' -- optional
 );
 
 CREATE INDEX shapes_shape_key ON shapes (shape_id);
@@ -215,7 +219,7 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 (3,'Driver arrangement only');
 
 
-
+-- MARCH 2023 GTFS
 -- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
 --   FROM '/home/szymon/Master-Thesis/data/gtfs/calendar.txt' DELIMITER ',' CSV HEADER;
 -- COPY calendar_dates(service_id,date,exception_type)
@@ -226,8 +230,6 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 --   FROM '/home/szymon/Master-Thesis/data/gtfs/trips.txt' DELIMITER ',' CSV HEADER;
 -- COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
 --   FROM '/home/szymon/Master-Thesis/data/gtfs/agency.txt' DELIMITER ',' CSV HEADER;
--- COPY route_types(route_type,description)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/route_types.txt' DELIMITER ',' CSV HEADER;
 -- COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
 --   FROM '/home/szymon/Master-Thesis/data/gtfs/routes.txt' DELIMITER ',' CSV HEADER;
 -- COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
@@ -235,6 +237,50 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 -- COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
 --   FROM '/home/szymon/Master-Thesis/data/gtfs/stops.txt' DELIMITER ',' CSV HEADER;
 
+-- trip_id|116787795251469500
+-- t|2000-01-06 08:04:00+01
+-- count|2
+
+-- trip_id|116787796251469500
+-- t|2000-01-06 11:44:00+01
+-- count|2
+
+-- trip_id|116787797251469500
+-- t|2000-01-06 12:30:00+01
+-- count|2
+
+
+-- JULY 2024 GTFS
+-- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/calendar.txt' DELIMITER ',' CSV HEADER;
+-- COPY calendar_dates(service_id,date,exception_type)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/calendar_dates.txt' DELIMITER ',' CSV HEADER;
+-- COPY stop_times(trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type) 
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/stop_times.txt' DELIMITER ',' CSV HEADER;
+-- COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/trips.txt' DELIMITER ',' CSV HEADER;
+-- COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/agency.txt' DELIMITER ',' CSV HEADER;
+-- COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/routes.txt' DELIMITER ',' CSV HEADER;
+-- COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence, shape_dist_traveled)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/shapes.txt' DELIMITER ',' CSV HEADER;
+-- COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
+--   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/stops.txt' DELIMITER ',' CSV HEADER;
+
+-- trip_id|119297170261945501
+-- t|2000-01-06 06:43:08+01
+-- count|2
+
+-- trip_id|119297171261945501
+-- t|2000-01-06 08:49:55+01
+-- count|2
+
+-- trip_id|119297172261945501
+-- t|2000-01-06 07:49:55+01
+-- count|2
+
+-- WORKSHOP METRO 1 WEEK REDUCED GTFS
 COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar.txt' DELIMITER ',' CSV HEADER;
 COPY calendar_dates(service_id,date,exception_type)
@@ -245,14 +291,45 @@ COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/trips.txt' DELIMITER ',' CSV HEADER;
 COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/agency.txt' DELIMITER ',' CSV HEADER;
-COPY route_types(route_type,description) --  not needed?
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/route_types.txt' DELIMITER ',' CSV HEADER;
 COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/routes.txt' DELIMITER ',' CSV HEADER;
 COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/shapes.txt' DELIMITER ',' CSV HEADER;
 COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stops.txt' DELIMITER ',' CSV HEADER;
+
+/* Artificially increase workshop service end_date for debugging. (less time consuming than other gtfs) */
+UPDATE calendar
+  SET end_date = end_date + INTERVAL '3 week';
+
+
+/* Counting service date range */ 
+SELECT
+  CASE
+    WHEN
+      (end_date + INTERVAL '1 day') - start_date <= INTERVAL '1 week' 
+      THEN '<=1W'
+    WHEN
+      (end_date + INTERVAL '1 day') - start_date <= INTERVAL '2 week' AND
+      (end_date + INTERVAL '1 day') - start_date > INTERVAL '1 week'
+      THEN '<=2W'
+    WHEN
+      (end_date + INTERVAL '1 day') - start_date <= INTERVAL '3 week' AND
+      (end_date + INTERVAL '1 day') - start_date > INTERVAL '2 week'
+      THEN '<=3W'
+    WHEN
+      (end_date + INTERVAL '1 day') - start_date <= INTERVAL '4 week' AND
+      (end_date + INTERVAL '1 day') - start_date > INTERVAL '3 week'
+      THEN '<=4W'
+    ELSE '>4W'
+  END AS range_bucket,
+  COUNT(*) as count
+FROM calendar
+GROUP BY range_bucket;
+SELECT count(*)
+FROM calendar;
+
+
 
 
 -- transforming lon/lat data into postGIS geometries
@@ -325,6 +402,7 @@ CREATE TABLE trip_stops (
 INSERT INTO trip_stops (trip_id, stop_sequence, no_stops, route_id, service_id, shape_id, stop_id, arrival_time)
   SELECT t.trip_id, stop_sequence, MAX(stop_sequence) OVER (PARTITION BY t.trip_id), route_id, service_id, shape_id, stop_id, arrival_time
   FROM trips t JOIN stop_times s ON t.trip_id = s.trip_id;
+  
 UPDATE trip_stops t
   SET perc = 
     CASE
@@ -422,19 +500,6 @@ INSERT INTO trip_points (trip_id, route_id, service_id, stop1_sequence, point_se
     END AS point_arrival_time
     FROM temp3;
 
--- SELECT trip_id,
--- 	route_id,
--- 	service_id,
--- 	stop1_sequence,
--- 	point_sequence,
--- 	ST_AsText(point_geom),
--- 	point_arrival_time
--- FROM trip_points
--- ORDER BY service_id, trip_id
--- LIMIT 50;
-
-
-
 -- note: only contains the first date of the trip 
 CREATE TABLE trips_input (
 	trip_id text,
@@ -449,6 +514,34 @@ INSERT INTO trips_input
   FROM trip_points t JOIN
   ( SELECT service_id, MIN(date) AS date FROM periodic_dates GROUP BY service_id) s
   ON t.service_id = s.service_id;
+
+
+/* 
+ * Removing duplicate timestamps 
+ * cause God decided to add 
+ * floating point precision problems
+ * into this world.
+ */
+DELETE FROM trips_input WHERE
+ (trip_id, t) IN (
+  SELECT trip_id, t
+  FROM trips_input
+  GROUP BY trip_id, t
+  HAVING count(*) > 1
+ )
+ AND ctid NOT IN (
+  SELECT min(ctid)
+  FROM trips_input
+  GROUP BY trip_id, t
+  HAVING count(*) > 1
+);
+
+/* Debug: list trajectories with duplicate timestamps */
+-- SELECT trip_id, t, count(*)
+-- FROM trips_input
+-- GROUP BY trip_id, t
+-- HAVING count(*) > 1;
+
 
 
 CREATE TABLE trips_mdb (
@@ -486,9 +579,9 @@ SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::
 -- REPEATS A TRIP FOR EACH DAY OF WEEK THE SERVICE RUNS
 -- e.g. from only (Mon) to (Mon, Tue, Wed, Thu, Fri)
 
-SELECT route_id, service_id, date, direction_id, count(*) FROM trips_mdb_week
-GROUP BY route_id, service_id, date, direction_id
-ORDER BY route_id, service_id, direction_id, date;
+-- SELECT route_id, service_id, date, direction_id, count(*) FROM trips_mdb_week
+-- GROUP BY route_id, service_id, date, direction_id
+-- ORDER BY route_id, service_id, direction_id, date;
 -- route_id|1
 -- service_id|200039050
 -- date|2000-01-01
@@ -497,9 +590,9 @@ ORDER BY route_id, service_id, direction_id, date;
 
 SELECT 2+2;
 
-SELECT route_id, direction_id, count(*) FROM trips_mdb_week
-GROUP BY route_id, direction_id
-ORDER BY route_id;
+-- SELECT route_id, direction_id, count(*) FROM trips_mdb_week
+-- GROUP BY route_id, direction_id
+-- ORDER BY route_id;
 
 
 INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", "date", "trip")
@@ -518,12 +611,10 @@ INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", 
 
 
 
-SELECT trip_id, direction_id, service_id, route_id, date, asText(trip::tgeompoint)
-FROM trips_mdb_week
-WHERE trip_id = '106624048200039050'
-ORDER BY date;
-
-
+-- SELECT trip_id, direction_id, service_id, route_id, date, asText(trip::tgeompoint)
+-- FROM trips_mdb_week
+-- WHERE trip_id = '106624048200039050'
+-- ORDER BY date;
 
 -- SELECT 10+1;
 -- SELECT * FROM periodic_dates d WHERE service_id = '200039050'; 
@@ -532,11 +623,47 @@ ORDER BY date;
 -- SELECT anchor(trip, pmode('1 week', 1000, true, '[2024-06-01, 2024-06-30]')) as result
 -- FROM trips_mdb_week
 -- WHERE trip_id = '106624048200039050';
- 
--- SELECT anchor(trip, pmode('1 week'::interval, NULL, true, span(c.start_date, c.end_date, true, true)::tstzspan))
+
+-- SELECT trip_id, c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval
 -- FROM trips_mdb_week t
 -- JOIN calendar c ON t.service_id = c.service_id
 -- WHERE trip_id = '106624048200039050';
+
+SELECT 2+2;
+
+WITH anchored_trips AS (
+  SELECT anchor(
+    trip,
+    span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+    '1 week'::interval,
+    false) as anchor_trip,
+    trip_id,
+    route_id,
+    direction_id,
+    numInstants(trip::tgeompoint) as numInstTrip,
+    c.start_date::timestamptz as sDate,
+    c.end_date::timestamptz as eDate
+  FROM trips_mdb_week t
+  INNER JOIN calendar c ON t.service_id = c.service_id
+  -- WHERE trip_id = '106624048200039050'
+  -- ORDER BY anchor_trip
+  )
+SELECT 
+  route_id,
+  trip_id,
+  direction_id,
+  sDate,
+  eDate,
+  asText(startInstant(anchor_trip)) as startInst,
+  asText(endInstant(anchor_trip)) as endInst,
+  numInstants(anchor_trip) as numInstAnchor,
+  numInstTrip
+FROM anchored_trips
+WHERE numInstants(anchor_trip) > numInstTrip
+ORDER BY route_id, startInst;
+
+
+SELECT 90+9;
 
 
 -- SELECT anchor(trip, pmode('1 week', 0, true, '[2019-11-01, 2019-12-01]'))
