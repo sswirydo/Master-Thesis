@@ -178,8 +178,15 @@ SELECT anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2019
 SELECT anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2019-11-01, 2019-11-29 13:45:00]'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1]);
 
 
+SELECT periodic_align(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'));
+SELECT periodic_align(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), timestamp '2000-01-01 15:23:23');
 
-
+SELECT periodicValueAtTimestamp(
+  pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'),
+  '[2000-01-01 00:00:00, 2000-02-01 00:00:00]'::tstzspan,
+  '1 day'::interval,
+  '2000-01-03 08:00:00'::timestamptz
+);
 
 -- SELECT tint '[1@2001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
 -- SELECT pint '[12001-01-01 08:00:00, 1@2001-01-03 08:00:00]';

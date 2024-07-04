@@ -298,6 +298,7 @@ COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
 COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stops.txt' DELIMITER ',' CSV HEADER;
 
+
 /* Artificially increase workshop service end_date for debugging. (less time consuming than other gtfs) */
 UPDATE calendar
   SET end_date = end_date + INTERVAL '3 week';
@@ -331,8 +332,7 @@ FROM calendar;
 
 
 
-
--- transforming lon/lat data into postGIS geometries
+/* Transforming lon/lat point data into postGIS geometries */
 INSERT INTO shape_geoms
 SELECT 
   shape_id, 
@@ -363,27 +363,6 @@ CREATE TABLE periodic_dates AS (
     )
 );
 
--- CREATE TABLE service_dates AS (
---   SELECT service_id, date_trunc('day', d)::date AS date
---     FROM calendar c, generate_series(start_date, end_date, '1 day'::interval) AS d
---     WHERE (
---       (monday = 1 AND extract(isodow FROM d) = 1) OR
---       (tuesday = 1 AND extract(isodow FROM d) = 2) OR
---       (wednesday = 1 AND extract(isodow FROM d) = 3) OR
---       (thursday = 1 AND extract(isodow FROM d) = 4) OR
---       (friday = 1 AND extract(isodow FROM d) = 5) OR
---       (saturday = 1 AND extract(isodow FROM d) = 6) OR
---       (sunday = 1 AND extract(isodow FROM d) = 7)
---     )
---   EXCEPT
---     SELECT service_id, date
---       FROM calendar_dates WHERE exception_type = 2
---     UNION
---     SELECT c.service_id, date
---       FROM calendar c JOIN calendar_dates d ON c.service_id = d.service_id
---       WHERE exception_type = 1 AND start_date <= date AND date <= end_date
--- );
-
 
 
 CREATE TABLE trip_stops (
@@ -398,11 +377,9 @@ CREATE TABLE trip_stops (
   arrival_time interval,
   perc float
 );
-
 INSERT INTO trip_stops (trip_id, stop_sequence, no_stops, route_id, service_id, shape_id, stop_id, arrival_time)
   SELECT t.trip_id, stop_sequence, MAX(stop_sequence) OVER (PARTITION BY t.trip_id), route_id, service_id, shape_id, stop_id, arrival_time
   FROM trips t JOIN stop_times s ON t.trip_id = s.trip_id;
-  
 UPDATE trip_stops t
   SET perc = 
     CASE
@@ -434,7 +411,8 @@ CREATE TABLE trip_segs (
   PRIMARY KEY (trip_id, stop1_sequence)
 );
 
--- basically creates LINES between current and next stop
+
+/* Basically, creates LINES between current and next stop */
 INSERT INTO trip_segs (trip_id, route_id, service_id, stop1_sequence, stop2_sequence, no_stops, shape_id, stop1_arrival_time, stop2_arrival_time, perc1, perc2)
   WITH temp AS (
     SELECT trip_id, route_id, service_id, stop_sequence as stop_sequence1,
@@ -459,7 +437,7 @@ INSERT INTO trip_segs (trip_id, route_id, service_id, stop1_sequence, stop2_sequ
     SET seg_length = ST_Length(seg_geom), no_points = ST_NumPoints(seg_geom);
 
 
--- extracts points from segments (simplifies segments into points)
+/* Extracts points from segments (simplifies segments into points) */
 CREATE TABLE trip_points (
 	trip_id text,
 	route_id text,
@@ -470,6 +448,7 @@ CREATE TABLE trip_points (
 	point_arrival_time interval,
 	PRIMARY KEY (trip_id, stop1_sequence, point_sequence)
 );
+
 
 -- temp1: does ST_DumpPoints and adds point_sequence (dump.path) and point_geom (dump.geom)
 -- temp2: filters temp1 from excessive duplicate points, unless its the last segment
@@ -499,6 +478,7 @@ INSERT INTO trip_points (trip_id, route_id, service_id, stop1_sequence, point_se
     ELSE stop1_arrival_time + ((stop2_arrival_time - stop1_arrival_time) * perc)
     END AS point_arrival_time
     FROM temp3;
+
 
 -- note: only contains the first date of the trip 
 CREATE TABLE trips_input (
@@ -536,11 +516,9 @@ DELETE FROM trips_input WHERE
   HAVING count(*) > 1
 );
 
-/* Debug: list trajectories with duplicate timestamps */
--- SELECT trip_id, t, count(*)
--- FROM trips_input
--- GROUP BY trip_id, t
--- HAVING count(*) > 1;
+
+/* DEBUG: lists trajectories with duplicate timestamps */
+-- SELECT trip_id, t, count(*) FROM trips_input GROUP BY trip_id, t HAVING count(*) > 1;
 
 
 
@@ -558,7 +536,6 @@ INSERT INTO trips_mdb(trip_id, direction_id, service_id, route_id, date, trip)
   FROM trips_input ti JOIN trips tr ON ti.trip_id = tr.trip_id
   GROUP BY ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, ti.date;
 
--- UPDATE trips_mdb SET trip = shiftTime(trip, '2 weeks');
 
 -- day format would require a more complex repeat behavior (repeat every day except on weekends)
 CREATE TABLE trips_mdb_day AS
@@ -569,32 +546,35 @@ CREATE TABLE trips_mdb_week AS
 SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'week') as trip FROM trips_mdb;
 
 
-
--- REPEATS DATES OVER THERE
--- INSERT INTO trips_mdb(trip_id, service_id, route_id, date, trip)
---   SELECT trip_id, route_id, t.service_id, d.date,
---     shiftTime(trip, make_interval(days => d.date - t.date))
---   FROM trips_mdb t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
-
--- REPEATS A TRIP FOR EACH DAY OF WEEK THE SERVICE RUNS
--- e.g. from only (Mon) to (Mon, Tue, Wed, Thu, Fri)
-
--- SELECT route_id, service_id, date, direction_id, count(*) FROM trips_mdb_week
--- GROUP BY route_id, service_id, date, direction_id
--- ORDER BY route_id, service_id, direction_id, date;
--- route_id|1
--- service_id|200039050
--- date|2000-01-01
--- direction_id|0
--- count|175
-
+/* DEBUG: Checks how many similar trips are there */
+WITH aligned_trips AS (
+  SELECT 
+    (periodic_align(trip))::tgeompoint as altrip, 
+    trip_id, 
+    route_id,
+    direction_id,
+    service_id
+  FROM trips_mdb_week
+), specific_trips AS (
+  SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
+  FROM aligned_trips
+  GROUP BY route_id, service_id, direction_id, altrip
+  HAVING count(*) = 1
+), common_trips AS (
+  SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
+  FROM aligned_trips
+  GROUP BY route_id, service_id, direction_id, altrip
+  HAVING count(*) > 1
+)
+-- SELECT count(*) FROM specific_trips;
+-- SELECT * FROM common_trips ORDER BY cnt DESC LIMIT 10;
 SELECT 2+2;
 
--- SELECT route_id, direction_id, count(*) FROM trips_mdb_week
--- GROUP BY route_id, direction_id
--- ORDER BY route_id;
 
 
+
+
+/* Repeats trips fro each service day of week */ 
 INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", "date", "trip")
   SELECT 
     trip_id as trip_id,
@@ -611,25 +591,14 @@ INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", 
 
 
 
--- SELECT trip_id, direction_id, service_id, route_id, date, asText(trip::tgeompoint)
--- FROM trips_mdb_week
--- WHERE trip_id = '106624048200039050'
--- ORDER BY date;
 
--- SELECT 10+1;
--- SELECT * FROM periodic_dates d WHERE service_id = '200039050'; 
--- SELECT 10+2;
-
--- SELECT anchor(trip, pmode('1 week', 1000, true, '[2024-06-01, 2024-06-30]')) as result
--- FROM trips_mdb_week
--- WHERE trip_id = '106624048200039050';
 
 -- SELECT trip_id, c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval
 -- FROM trips_mdb_week t
 -- JOIN calendar c ON t.service_id = c.service_id
 -- WHERE trip_id = '106624048200039050';
 
-SELECT 2+2;
+
 
 WITH anchored_trips AS (
   SELECT anchor(
@@ -647,43 +616,23 @@ WITH anchored_trips AS (
   INNER JOIN calendar c ON t.service_id = c.service_id
   -- WHERE trip_id = '106624048200039050'
   -- ORDER BY anchor_trip
-  )
-SELECT 
-  route_id,
-  trip_id,
-  direction_id,
-  sDate,
-  eDate,
-  asText(startInstant(anchor_trip)) as startInst,
-  asText(endInstant(anchor_trip)) as endInst,
-  numInstants(anchor_trip) as numInstAnchor,
-  numInstTrip
-FROM anchored_trips
-WHERE numInstants(anchor_trip) > numInstTrip
-ORDER BY route_id, startInst;
-
-
+), repeating_trips AS (
+  SELECT 
+    route_id,trip_id,direction_id,
+    sDate, eDate,
+    asText(startInstant(anchor_trip)) as startInst,
+    asText(endInstant(anchor_trip)) as endInst,
+    numInstants(anchor_trip) as numInstAnchor,
+    numInstTrip
+  FROM anchored_trips
+  WHERE numInstants(anchor_trip) > numInstTrip
+  ORDER BY route_id, startInst
+) 
 SELECT 90+9;
 
 
--- SELECT anchor(trip, pmode('1 week', 0, true, '[2019-11-01, 2019-12-01]'))
--- CREATE VIEW final_sequences AS
---   WITH anchored_trips1 AS (
---     SELECT 
---       trip_id, direction_id, service_id, route_id, -- date,
---       anchor(trip, pmode('1 week', 0, true, tstzspan(cal.start_date, cal.end_date))) as trip
---     FROM trips_mdb_week mdb JOIN calendar cal ON mdb.service_id = cal.service_id
---   WHERE service_id = '200039050' AND trip_id = '106624048200039050'
---   ),
---   WITH anchored_trips2 AS (
---     SELECT
---       trip_id, direction_id, service_id, route_id,
---       startTimestamp(trip),
---       trip
---     FROM anchored_trips1
---   ),
---   WITH 
-  
+
+
 
 
 
