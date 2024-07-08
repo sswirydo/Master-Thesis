@@ -537,11 +537,24 @@ INSERT INTO trips_mdb(trip_id, direction_id, service_id, route_id, date, trip)
   GROUP BY ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, ti.date;
 
 
--- day format would require a more complex repeat behavior (repeat every day except on weekends)
+/* Day-style format 
+ * Requires a more complex anchor / repeat behavior 
+ * (e.g., repeat every day except on weekends)
+ */
 CREATE TABLE trips_mdb_day AS
 SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'day') as trip FROM trips_mdb;
 
--- some trips may be repeated (at most 7 times)
+/* Shifting all trajectories of _day table to 2000-01-01 date */
+UPDATE trips_mdb_day
+  SET trip = shiftTime(trip::tgeompoint, (age('2000-01-01'::date, date)))::pgeompoint
+  WHERE date >= '2000-01-02'::date;
+ALTER TABLE trips_mdb_day DROP COLUMN "date";
+
+
+/* Week-style format
+ * Periodic but note that trips might be duplicated at most 7 times
+ * for each different day_of_week of service.
+ */
 CREATE TABLE trips_mdb_week AS
 SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::pgeompoint, 'week') as trip FROM trips_mdb;
 
@@ -601,11 +614,12 @@ INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", 
 
 
 WITH anchored_trips AS (
-  SELECT anchor(
-    trip,
-    span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
-    '1 week'::interval,
-    false) as anchor_trip,
+  SELECT 
+    anchor(
+      trip,
+      span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+      '1 week'::interval,
+      false) as anchor_trip,
     trip_id,
     route_id,
     direction_id,
@@ -633,10 +647,132 @@ SELECT 90+9;
 
 
 
+/*****************************************************************************
+ *  Transport related queries 
+*****************************************************************************/
+
+-- todo do we want trips_mdb_day to always start at 'Monday' ? probably yeah
+
+/* Query
+ * Quickest travel from A to B using public transport.
+ * Idea:
+ * - filter trips by start time period 
+ * - filter by base trajectory (by proximity to point A and point B)
+ * - check if when anchored to the given day the trip actually exists
+ * - retrieve the nearest timestamp per line (warning difference must be >0)
+ */
+
+-- IMPORTANT
+-- Les trajectoires ne commencent pas au point où on est. :p
+-- Faut aussi embarquer au niveau d'un stop :p -> join avec les stops et match 
+-- Faut checker dans une timestamp range et pas un =timestamp pour match le ts du départ
+
+-- (ST_SetSRID(ST_MakePoint(-73.9857, 40.7484), 4326)), -- Point A
+-- (ST_SetSRID(ST_MakePoint(-73.9851, 40.7486), 4326)); -- Point B
+
+-- ST_DWithin(a.geom, b.geom, 100 / 111320.0) AS within_100m
+
+-- startValue
+-- endValue
 
 
 
+SELECT 100+1;
 
+-- WITH args AS (
+--   SELECT 
+--     ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) as artsloi,
+--     ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) as merode,
+--     ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) as delta,
+--     '2019-11-04 12:00:00'::timestamptz as test_ts
+-- ), near_routes AS (
+--   SELECT t.route_id, route_long_name
+--   FROM trips_mdb_day t INNER JOIN routes r ON t.route_id = r.route_id
+--   WHERE 
+--     eDwithin((trip::tgeompoint)::tgeogpoint, (select delta from args)::geography, 300) -- start point
+--     AND eDwithin((trip::tgeompoint)::tgeogpoint, (select artsloi from args)::geography, 300) -- destination
+--   GROUP BY t.route_id, route_long_name
+-- )
+-- SELECT trip_id, asText(trip::tgeompoint)
+-- FROM trips_mdb_day t
+--   JOIN near_routes n ON t.route_id = n.route_id
+--   JOIN calendar c ON t.service_id = c.service_id
+-- WHERE 
+--   atTime(
+--     anchor_array(
+--       trip,
+--       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+--       '1 day'::interval,
+--       true,
+--       ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday]), 
+--     span((select test_ts from args), (select test_ts from args) + '30 minutes'::interval, true, true))
+--   IS NOT NULL;
+
+/* problems
+- how to check if start point is before destination ?
+
+*/
+
+
+SELECT 100+2;
+
+
+WITH args AS (
+  SELECT 
+    ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) AS artsloi,
+    ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) AS merode,
+    ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) AS delta,
+    '2019-11-04 12:00:00'::timestamptz AS test_ts_mon,
+    '2019-11-10 12:00:00'::timestamptz AS test_ts_sun
+), temp_near_trips AS (
+  SELECT DISTINCT
+    t.trip_id,
+    nearestApproachInstant(trip::tgeompoint, (select delta from args))::tgeogpoint AS start_point,
+    nearestApproachInstant(trip::tgeompoint, (select artsloi from args))::tgeogpoint AS end_point
+  FROM 
+    trips_mdb_day t
+  WHERE 
+    eDwithin((trip::tgeompoint)::tgeogpoint, (select delta from args)::geography, 300) -- start point
+    AND eDwithin((trip::tgeompoint)::tgeogpoint, (select artsloi from args)::geography, 300) -- destination
+), near_trips AS (
+  SELECT 
+    *
+  FROM 
+    temp_near_trips
+  WHERE 
+    getTimestamp(start_point) < getTimestamp(end_point)
+    AND start_point &&
+      span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz)
+), anchored_trips AS (
+  SELECT
+    t.trip_id,
+    anchor_array(
+      trip,
+      span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
+      '1 day'::interval,
+      true,
+      ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday],
+      (EXTRACT(DOW FROM c.start_date::timestamptz)::int + 6) % 7
+    ) as anchor_seq,
+    n.start_point,
+    n.end_point
+  FROM 
+    trips_mdb_day t
+    INNER JOIN near_trips n ON t.trip_id = n.trip_id
+    INNER JOIN calendar c ON t.service_id = c.service_id
+)
+SELECT 
+  trip_id, timeSpan(anchor_seq), asText(start_point), asText(end_point),
+  getTime(anchor_seq)
+FROM 
+  anchored_trips
+WHERE
+  anchor_seq IS NOT NULL
+  AND getTime(anchor_seq) && span((select test_ts_sun from args), (select test_ts_sun + '1 hour'::interval from args))
+ORDER BY getTimestamp(end_point) ASC
+LIMIT 10;
+  
+-- AND getTime(anchor_seq) @> (select test_ts_sun from args) -- does 1st contain 2nd
 
 
 

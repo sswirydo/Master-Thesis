@@ -185,8 +185,24 @@ SELECT periodicValueAtTimestamp(
   pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'),
   '[2000-01-01 00:00:00, 2000-02-01 00:00:00]'::tstzspan,
   '1 day'::interval,
-  '2000-01-03 08:00:00'::timestamptz
+  '2000-01-03 08:45:00'::timestamptz
 );
+
+SELECT periodicTimestamptzToRelative(
+  '[2000-01-03 00:00:00, 2000-02-01 00:00:00]'::tstzspan,
+  '10 min'::interval,
+  '2000-01-03 08:45:00'::timestamptz
+);
+
+SELECT age('2000-01-01', '2000-01-06');
+
+SELECT span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 12:30:00 UTC'::timestamptz);
+
+SELECT EXTRACT(DOW FROM '2019-11-04 12:00:00'::timestamptz);
+SELECT (EXTRACT(DOW FROM '2024-07-15 12:00:00'::timestamptz) + 6) % 7;
+
+
+SELECT tstzspanset '{[2019-11-03 12:52:38+01, 2019-11-03 13:26:55+01], [2019-11-10 12:52:38+01, 2019-11-10 13:26:55+01], [2019-11-17 12:52:38+01, 2019-11-17 13:26:55+01], [2019-11-24 12:52:38+01, 2019-11-24 13:26:55+01]}' && tstzspan '[2019-11-10 10:00:00, 2019-11-10 16:00:00]';
 
 -- SELECT tint '[1@2001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
 -- SELECT pint '[12001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
