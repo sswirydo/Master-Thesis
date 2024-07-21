@@ -188,11 +188,11 @@ SELECT periodicValueAtTimestamp(
   '2000-01-03 08:45:00'::timestamptz
 );
 
-SELECT periodicTimestamptzToRelative(
-  '[2000-01-03 00:00:00, 2000-02-01 00:00:00]'::tstzspan,
-  '10 min'::interval,
-  '2000-01-03 08:45:00'::timestamptz
-);
+-- SELECT periodicTimestamptzToRelative(
+--   '[2000-01-03 00:00:00, 2000-02-01 00:00:00]'::tstzspan,
+--   '10 min'::interval,
+--   '2000-01-03 08:45:00'::timestamptz
+-- );
 
 SELECT age('2000-01-01', '2000-01-06');
 
@@ -204,10 +204,59 @@ SELECT (EXTRACT(DOW FROM '2024-07-15 12:00:00'::timestamptz) + 6) % 7;
 
 SELECT tstzspanset '{[2019-11-03 12:52:38+01, 2019-11-03 13:26:55+01], [2019-11-10 12:52:38+01, 2019-11-10 13:26:55+01], [2019-11-17 12:52:38+01, 2019-11-17 13:26:55+01], [2019-11-24 12:52:38+01, 2019-11-24 13:26:55+01]}' && tstzspan '[2019-11-10 10:00:00, 2019-11-10 16:00:00]';
 
+
+SELECT periodicValueAtTimestamp(
+  pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'),
+  '[2024-03-01 00:00:00, 2034-04-01 00:00:00]'::tstzspan,
+  '2 hours'::interval,
+  '2024-06-02 07:25:00'::timestamptz
+);
+
+-- \timing on
+SELECT periodicValueAtTimestamp(
+  pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'),
+  '[2024-02-01 00:00:00, 3024-02-01 00:00:00]'::tstzspan,
+  '2 hours'::interval,
+  '2024-03-06 10:45:00'::timestamptz
+);
+
+
 -- SELECT tint '[1@2001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
 -- SELECT pint '[12001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
 
 -- SELECT tgeompoint '[Point(0 0)@2017-01-01 08:00:00, Point(0 0)@2017-01-01 08:05:00)';
 -- SELECT pgeompoint '[Point(0 0)@2017-01-01 08:00:00, Point(0 0)@2017-01-01 08:05:00)';
 
--- SELECT postgis_full_version();
+SELECT postgis_full_version();
+SELECT mobilitydb_full_version();
+
+SELECT 
+  make_interval(days => 7 - (EXTRACT(DOW FROM '2024-07-21'::timestamptz)::int + 6) % 7);
+
+SELECT 
+  '2024-07-18'::date,
+  '2024-07-18'::timestamp,
+  ((EXTRACT(DOW FROM '2024-07-18'::timestamp)::int + 6) % 7);
+
+SELECT span('2023-03-23 UTC'::timestamptz, '2023-04-13 UTC'::timestamptz + '1 day'::interval);
+
+SELECT span(('2023-03-23')::timestamptz AT TIME ZONE 'UTC', (('2023-04-13')::timestamptz AT TIME ZONE 'UTC' + '1 day'::interval ));
+
+SELECT span(('2023-03-23' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', ('2023-04-13' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval);
+SELECT span(('2023-03-23' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', ('2023-04-13' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval);
+SELECT span(('2023-03-23' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', ('2023-04-13' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval);
+
+
+-- 23:00:00 
+-- +16h14
+-- 15:00:00 CET
+-- 14:00:00 UTC
+
+
+
+-- \set ON_ERROR_STOP on
+-- DO $$ 
+-- BEGIN
+--    RAISE EXCEPTION 'Stopping execution here';
+-- END;
+-- $$ language plpgsql;

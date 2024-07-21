@@ -64,6 +64,15 @@ if they are the same perhaps we can compute the geometry once per service rather
  */
 
 
+/*
+MARCH 2023 REFERENCE TRIP (route 60) (bus 71) (Mon-Fri)
+WHERE trip_id = '116621908250654060';
+
+WORKSHOP REFERENCE TRIP (Mon-Fri)
+WHERE trip_id = '106624048200039050'
+
+*/
+
 
 
 CREATE EXTENSION MobilityDB CASCADE;
@@ -220,22 +229,22 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 
 
 -- MARCH 2023 GTFS
--- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
---   FROM '/home/szymon/Master-Thesis/data/gtfs/calendar.txt' DELIMITER ',' CSV HEADER;
--- COPY calendar_dates(service_id,date,exception_type)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/calendar_dates.txt' DELIMITER ',' CSV HEADER;
--- COPY stop_times(trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type) 
---   FROM '/home/szymon/Master-Thesis/data/gtfs/stop_times.txt' DELIMITER ',' CSV HEADER;
--- COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/trips.txt' DELIMITER ',' CSV HEADER;
--- COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/agency.txt' DELIMITER ',' CSV HEADER;
--- COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/routes.txt' DELIMITER ',' CSV HEADER;
--- COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/shapes.txt' DELIMITER ',' CSV HEADER;
--- COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
---   FROM '/home/szymon/Master-Thesis/data/gtfs/stops.txt' DELIMITER ',' CSV HEADER;
+COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
+  FROM '/home/szymon/Master-Thesis/data/gtfs/calendar.txt' DELIMITER ',' CSV HEADER;
+COPY calendar_dates(service_id,date,exception_type)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/calendar_dates.txt' DELIMITER ',' CSV HEADER;
+COPY stop_times(trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type) 
+  FROM '/home/szymon/Master-Thesis/data/gtfs/stop_times.txt' DELIMITER ',' CSV HEADER;
+COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/trips.txt' DELIMITER ',' CSV HEADER;
+COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/agency.txt' DELIMITER ',' CSV HEADER;
+COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/routes.txt' DELIMITER ',' CSV HEADER;
+COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/shapes.txt' DELIMITER ',' CSV HEADER;
+COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
+  FROM '/home/szymon/Master-Thesis/data/gtfs/stops.txt' DELIMITER ',' CSV HEADER;
 
 -- trip_id|116787795251469500
 -- t|2000-01-06 08:04:00+01
@@ -281,27 +290,26 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 -- count|2
 
 -- WORKSHOP METRO 1 WEEK REDUCED GTFS
-COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar.txt' DELIMITER ',' CSV HEADER;
-COPY calendar_dates(service_id,date,exception_type)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar_dates.txt' DELIMITER ',' CSV HEADER;
-COPY stop_times(trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type) 
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stop_times.txt' DELIMITER ',' CSV HEADER;
-COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/trips.txt' DELIMITER ',' CSV HEADER;
-COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/agency.txt' DELIMITER ',' CSV HEADER;
-COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/routes.txt' DELIMITER ',' CSV HEADER;
-COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/shapes.txt' DELIMITER ',' CSV HEADER;
-COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stops.txt' DELIMITER ',' CSV HEADER;
+-- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar.txt' DELIMITER ',' CSV HEADER;
+-- COPY calendar_dates(service_id,date,exception_type)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar_dates.txt' DELIMITER ',' CSV HEADER;
+-- COPY stop_times(trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type) 
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stop_times.txt' DELIMITER ',' CSV HEADER;
+-- COPY trips(route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/trips.txt' DELIMITER ',' CSV HEADER;
+-- COPY agency(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/agency.txt' DELIMITER ',' CSV HEADER;
+-- COPY routes(route_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/routes.txt' DELIMITER ',' CSV HEADER;
+-- COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/shapes.txt' DELIMITER ',' CSV HEADER;
+-- COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/stops.txt' DELIMITER ',' CSV HEADER;
 
-
-/* Artificially increase workshop service end_date for debugging. (less time consuming than other gtfs) */
-UPDATE calendar
-  SET end_date = end_date + INTERVAL '3 week';
+-- /* Artificially increase workshop service end_date for debugging. (less time consuming than other gtfs) */
+-- UPDATE calendar
+--   SET end_date = end_date + INTERVAL '3 week';
 
 
 /* Counting service date range */ 
@@ -325,11 +333,11 @@ SELECT
     ELSE '>4W'
   END AS range_bucket,
   COUNT(*) as count
-FROM calendar
+FROM calendar c JOIN trips t ON c.service_id = t.service_id
 GROUP BY range_bucket;
-SELECT count(*)
-FROM calendar;
 
+SELECT count(*)
+FROM calendar c JOIN trips t ON c.service_id = t.service_id;
 
 
 /* Transforming lon/lat point data into postGIS geometries */
@@ -346,6 +354,7 @@ GROUP BY shape_id;
 
 UPDATE stops
 SET stop_geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326);
+
 
 
 
@@ -560,30 +569,28 @@ SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::
 
 
 /* DEBUG: Checks how many similar trips are there */
-WITH aligned_trips AS (
-  SELECT 
-    (periodic_align(trip))::tgeompoint as altrip, 
-    trip_id, 
-    route_id,
-    direction_id,
-    service_id
-  FROM trips_mdb_week
-), specific_trips AS (
-  SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
-  FROM aligned_trips
-  GROUP BY route_id, service_id, direction_id, altrip
-  HAVING count(*) = 1
-), common_trips AS (
-  SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
-  FROM aligned_trips
-  GROUP BY route_id, service_id, direction_id, altrip
-  HAVING count(*) > 1
-)
+-- WITH aligned_trips AS (
+--   SELECT 
+--     (periodic_align(trip))::tgeompoint as altrip, 
+--     trip_id, 
+--     route_id,
+--     direction_id,
+--     service_id
+--   FROM trips_mdb_week
+-- ), specific_trips AS (
+--   SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
+--   FROM aligned_trips
+--   GROUP BY route_id, service_id, direction_id, altrip
+--   HAVING count(*) = 1
+-- ), common_trips AS (
+--   SELECT route_id, service_id, direction_id, duration(altrip), count(*) as cnt
+--   FROM aligned_trips
+--   GROUP BY route_id, service_id, direction_id, altrip
+--   HAVING count(*) > 1
+-- )
 -- SELECT count(*) FROM specific_trips;
 -- SELECT * FROM common_trips ORDER BY cnt DESC LIMIT 10;
 SELECT 2+2;
-
-
 
 
 
@@ -603,47 +610,118 @@ INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", 
       AND t.date <> d.date;
 
 
+-- SELECT date, asText(trip) FROM trips_mdb_week
+-- WHERE trip_id = '116621908250654060' -- bus 71 (route 60)
+-- ORDER BY date;
+
+-- SELECT date, trip FROM trips_mdb_week
+-- WHERE trip_id = '116621908250654060' -- bus 71 (route 60)
+-- ORDER BY date;
+
+
+/*
+ * Because c.start_date is NOT necessarily a Monday,
+ * first, before anchoring,
+ * we cyclically shift the sequences such that relative Mon corresponds
+ * to start_date day of week.
+ */
+CREATE TABLE trips_mdb_week_shifted AS
+SELECT trip_id, direction_id, service_id, route_id, date, trip FROM trips_mdb_week;
+UPDATE trips_mdb_week_shifted t
+  SET trip =
+    CASE
+      WHEN 
+        ((EXTRACT(DOW FROM t.date::timestamp)::int + 1) % 7) < ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7)
+      THEN
+        shiftTime(
+          trip::tgeompoint,
+          make_interval(days => 7 - ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7))
+        )::pgeompoint
+      ELSE
+        shiftTime(
+          trip::tgeompoint,
+          make_interval(days => 0 - ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7))
+        )::pgeompoint
+      END
+  FROM calendar c
+  WHERE t.service_id = c.service_id;
+UPDATE trips_mdb_week_shifted t
+  SET date =
+    CASE
+      WHEN 
+        ((EXTRACT(DOW FROM t.date::timestamp)::int + 1) % 7) < ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7)
+      THEN
+        t.date + make_interval(days => 7 - ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7))
+      ELSE
+        t.date + make_interval(days => 0 - ((EXTRACT(DOW FROM c.start_date::timestamp)::int + 6) % 7))
+      END
+  FROM calendar c
+  WHERE t.service_id = c.service_id;
 
 
 
--- SELECT trip_id, c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval
--- FROM trips_mdb_week t
--- JOIN calendar c ON t.service_id = c.service_id
--- WHERE trip_id = '106624048200039050';
 
 
 
-WITH anchored_trips AS (
-  SELECT 
-    anchor(
+-- WITH anchored_trips AS (
+--   SELECT 
+--     anchor(
+--       trip,
+--       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+--       '1 week'::interval,
+--       false) as anchor_trip,
+--     trip_id,
+--     route_id,
+--     direction_id,
+--     numInstants(trip::tgeompoint) as numInstTrip,
+--     c.start_date::timestamptz as sDate,
+--     c.end_date::timestamptz as eDate
+--   FROM trips_mdb_week_shifted t
+--   INNER JOIN calendar c ON t.service_id = c.service_id
+--   -- WHERE trip_id = '116621908250654060'
+--   -- ORDER BY anchor_trip
+-- ), repeating_trips AS (
+--   SELECT 
+--     route_id,trip_id,direction_id,
+--     sDate, eDate,
+--     asText(startInstant(anchor_trip)) as startInst,
+--     asText(endInstant(anchor_trip)) as endInst,
+--     numInstants(anchor_trip) as numInstAnchor,
+--     numInstTrip
+--   FROM anchored_trips
+--   WHERE numInstants(anchor_trip) > numInstTrip
+--   ORDER BY route_id, startInst
+-- ) 
+-- SELECT 90+9;
+
+
+-- SELECT 
+--   asText(anchor(
+--       trip,
+--       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
+--       '1 week'::interval,
+--   false)) as anchor_trip
+-- FROM trips_mdb_week_shifted t
+-- INNER JOIN calendar c ON t.service_id = c.service_id
+-- WHERE trip_id = '116621908250654060';
+
+SELECT 
+  asText(anchor(
       trip,
-      span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+      span((c.start_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', (c.end_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval),
       '1 week'::interval,
-      false) as anchor_trip,
-    trip_id,
-    route_id,
-    direction_id,
-    numInstants(trip::tgeompoint) as numInstTrip,
-    c.start_date::timestamptz as sDate,
-    c.end_date::timestamptz as eDate
-  FROM trips_mdb_week t
-  INNER JOIN calendar c ON t.service_id = c.service_id
-  -- WHERE trip_id = '106624048200039050'
-  -- ORDER BY anchor_trip
-), repeating_trips AS (
-  SELECT 
-    route_id,trip_id,direction_id,
-    sDate, eDate,
-    asText(startInstant(anchor_trip)) as startInst,
-    asText(endInstant(anchor_trip)) as endInst,
-    numInstants(anchor_trip) as numInstAnchor,
-    numInstTrip
-  FROM anchored_trips
-  WHERE numInstants(anchor_trip) > numInstTrip
-  ORDER BY route_id, startInst
-) 
-SELECT 90+9;
+  false)) as anchor_trip
+FROM trips_mdb_week_shifted t
+INNER JOIN calendar c ON t.service_id = c.service_id
+WHERE trip_id = '116621908250654060';
 
+
+\set ON_ERROR_STOP on
+DO $$ 
+BEGIN
+   RAISE EXCEPTION 'Stopping execution here';
+END;
+$$ language plpgsql;
 
 
 
@@ -679,51 +757,73 @@ SELECT 90+9;
 
 SELECT 100+1;
 
+/* TRANSPORT FROM A TO B (WEEK) todo todo */
 -- WITH args AS (
 --   SELECT 
---     ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) as artsloi,
---     ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) as merode,
---     ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) as delta,
---     '2019-11-04 12:00:00'::timestamptz as test_ts
--- ), near_routes AS (
---   SELECT t.route_id, route_long_name
---   FROM trips_mdb_day t INNER JOIN routes r ON t.route_id = r.route_id
+--     ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) AS artsloi,
+--     ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) AS merode,
+--     ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) AS delta,
+--     '2019-11-04 12:30:00'::timestamptz AS test_ts_mon,
+--     '2019-11-10 12:30:00'::timestamptz AS test_ts_sun
+-- ), temp_near_trips AS (
+--   SELECT DISTINCT
+--     t.trip_id,
+--     nearestApproachInstant(trip::tgeompoint, (select delta from args))::tgeogpoint AS start_point,
+--     nearestApproachInstant(trip::tgeompoint, (select artsloi from args))::tgeogpoint AS end_point
+--   FROM 
+--     trips_mdb_day t
 --   WHERE 
 --     eDwithin((trip::tgeompoint)::tgeogpoint, (select delta from args)::geography, 300) -- start point
 --     AND eDwithin((trip::tgeompoint)::tgeogpoint, (select artsloi from args)::geography, 300) -- destination
---   GROUP BY t.route_id, route_long_name
--- )
--- SELECT trip_id, asText(trip::tgeompoint)
--- FROM trips_mdb_day t
---   JOIN near_routes n ON t.route_id = n.route_id
---   JOIN calendar c ON t.service_id = c.service_id
--- WHERE 
---   atTime(
+-- ), near_trips AS (
+--   SELECT 
+--     *
+--   FROM 
+--     temp_near_trips
+--   WHERE 
+--     getTimestamp(start_point) < getTimestamp(end_point)
+--     AND start_point &&
+--       span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz)
+-- ), anchored_trips AS (
+--   SELECT
+--     t.trip_id,
 --     anchor_array(
 --       trip,
---       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
+--       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
 --       '1 day'::interval,
 --       true,
---       ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday]), 
---     span((select test_ts from args), (select test_ts from args) + '30 minutes'::interval, true, true))
---   IS NOT NULL;
-
-/* problems
-- how to check if start point is before destination ?
-
-*/
+--       ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday],
+--       (EXTRACT(DOW FROM c.start_date::timestamptz)::int + 6) % 7
+--     ) as anchor_seq,
+--     n.start_point,
+--     n.end_point
+--   FROM 
+--     trips_mdb_day t
+--     INNER JOIN near_trips n ON t.trip_id = n.trip_id
+--     INNER JOIN calendar c ON t.service_id = c.service_id
+-- )
+-- SELECT 
+--   trip_id, timeSpan(anchor_seq), asText(start_point), asText(end_point),
+--   getTime(anchor_seq)
+-- FROM 
+--   anchored_trips
+-- WHERE
+--   anchor_seq IS NOT NULL
+--   AND getTime(anchor_seq) && span((select test_ts_sun from args), (select test_ts_sun + '1 hour'::interval from args))
+-- ORDER BY getTimestamp(end_point) ASC
+-- LIMIT 10;
 
 
 SELECT 100+2;
 
-
+/* TRANSPORT FROM A TO B (DAY) */
 WITH args AS (
   SELECT 
     ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) AS artsloi,
     ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) AS merode,
     ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) AS delta,
-    '2019-11-04 12:00:00'::timestamptz AS test_ts_mon,
-    '2019-11-10 12:00:00'::timestamptz AS test_ts_sun
+    '2019-11-04 12:30:00'::timestamptz AS test_ts_mon,
+    '2019-11-10 12:30:00'::timestamptz AS test_ts_sun
 ), temp_near_trips AS (
   SELECT DISTINCT
     t.trip_id,
@@ -771,8 +871,7 @@ WHERE
   AND getTime(anchor_seq) && span((select test_ts_sun from args), (select test_ts_sun + '1 hour'::interval from args))
 ORDER BY getTimestamp(end_point) ASC
 LIMIT 10;
-  
--- AND getTime(anchor_seq) @> (select test_ts_sun from args) -- does 1st contain 2nd
+
 
 
 
