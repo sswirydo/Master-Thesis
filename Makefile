@@ -1,7 +1,10 @@
 
-DB_NAME=mobility-test
+DB_NAME_GTFS=mobility-test
+DB_NAME_QUERY=mobility-query
 SQL_FILE=Master-Thesis/scripts/query.sql
 GTFS_FILE=Master-Thesis/scripts/gtfs.sql
+CLASSIC_GTFS_FILE=Master-Thesis/scripts/classic_gtfs.sql
+NORESET_FILE=Master-Thesis/scripts/noreset_query.sql
 DB_USER=postgres
 
 all:
@@ -27,25 +30,31 @@ compile:
 	cd build && make && sudo make install && sudo service postgresql restart
 
 query:
-	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
-	createdb -U $(DB_USER) $(DB_NAME)
-	psql -U $(DB_USER) -d $(DB_NAME) -f $(SQL_FILE)  # > output.log 2>&1
+	dropdb -U $(DB_USER) --if-exists $(DB_NAME_QUERY) 
+	createdb -U $(DB_USER) $(DB_NAME_QUERY)
+	psql -U $(DB_USER) -d $(DB_NAME_QUERY) -f $(SQL_FILE)  # > output.log 2>&1
 
 query-clean:
-	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
-	createdb -U $(DB_USER) $(DB_NAME)
-	psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(SQL_FILE) -A -t -P pager=off 
+	dropdb -U $(DB_USER) --if-exists $(DB_NAME_QUERY) 
+	createdb -U $(DB_USER) $(DB_NAME_QUERY)
+	psql -U $(DB_USER) -d $(DB_NAME_QUERY) -c '\x' -f $(SQL_FILE) -A -t -P pager=off 
 
-gtfs:
-	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
-	createdb -U $(DB_USER) $(DB_NAME)
-	# psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
-	psql -U $(DB_USER) -d $(DB_NAME) -f $(GTFS_FILE)
+# gtfs:
+# 	dropdb -U $(DB_USER) --if-exists $(DB_NAME_GTFS) 
+# 	createdb -U $(DB_USER) $(DB_NAME_GTFS)
+# 	# psql -U $(DB_USER) -d $(DB_NAME_GTFS) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
+# 	psql -U $(DB_USER) -d $(DB_NAME_GTFS) -f $(GTFS_FILE)
 
-gtfs-clean:
-	dropdb -U $(DB_USER) --if-exists $(DB_NAME) 
-	createdb -U $(DB_USER) $(DB_NAME)
-	psql -U $(DB_USER) -d $(DB_NAME) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
+# gtfs-clean:
+# 	dropdb -U $(DB_USER) --if-exists $(DB_NAME_GTFS) 
+# 	createdb -U $(DB_USER) $(DB_NAME_GTFS)
+# 	psql -U $(DB_USER) -d $(DB_NAME_GTFS) -c '\x' -f $(GTFS_FILE) -A -t -P pager=off 
+
+no-reset-gtfs:
+	psql -U $(DB_USER) -d $(DB_NAME_GTFS) -c '\x' -f $(NORESET_FILE) -A -t -P pager=off
+
+no-reset-gtfs-out:
+	psql -U $(DB_USER) -d $(DB_NAME_GTFS) -f $(NORESET_FILE) -o output-gtfs.log 2>&1
 
 example:
 	cd meos/examples/ && gcc -Wall -g -I/usr/local/include -o 01_meos_hello_world 01_meos_hello_world.c -L/usr/local/lib -lmeos && ./01_meos_hello_world

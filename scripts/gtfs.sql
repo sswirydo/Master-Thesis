@@ -372,6 +372,27 @@ CREATE TABLE periodic_dates AS (
     )
 );
 
+CREATE TABLE service_dates AS (
+  SELECT service_id, date_trunc('day', d)::date AS date
+    FROM calendar c, generate_series(start_date, end_date, '1 day'::interval) AS d
+    WHERE (
+      (monday = 1 AND extract(isodow FROM d) = 1) OR
+      (tuesday = 1 AND extract(isodow FROM d) = 2) OR
+      (wednesday = 1 AND extract(isodow FROM d) = 3) OR
+      (thursday = 1 AND extract(isodow FROM d) = 4) OR
+      (friday = 1 AND extract(isodow FROM d) = 5) OR
+      (saturday = 1 AND extract(isodow FROM d) = 6) OR
+      (sunday = 1 AND extract(isodow FROM d) = 7)
+    )
+  EXCEPT
+    SELECT service_id, date
+      FROM calendar_dates WHERE exception_type = 2
+    UNION
+    SELECT c.service_id, date
+      FROM calendar c JOIN calendar_dates d ON c.service_id = d.service_id
+      WHERE exception_type = 1 AND start_date <= date AND date <= end_date
+);
+
 
 
 CREATE TABLE trip_stops (
@@ -496,14 +517,27 @@ CREATE TABLE trips_input (
 	service_id text,
 	date date,
 	point_geom geometry,
-	t timestamptz
+	t timestamptz -- <--- problem: as it is ts with time zone there are shifts in arrival_times: specify UTC
 );
 INSERT INTO trips_input
-  SELECT trip_id, route_id, t.service_id, date, point_geom, date + point_arrival_time AS t
+  SELECT trip_id, route_id, t.service_id, date, point_geom, (date + point_arrival_time) AT TIME ZONE 'UTC' AS t
   FROM trip_points t JOIN
   ( SELECT service_id, MIN(date) AS date FROM periodic_dates GROUP BY service_id) s
   ON t.service_id = s.service_id;
 
+CREATE TABLE trips_input_classic (
+	trip_id text,
+	route_id text,
+	service_id text,
+	date date,
+	point_geom geometry,
+	t timestamptz
+);
+INSERT INTO trips_input_classic
+  SELECT trip_id, route_id, t.service_id, date, point_geom, date + point_arrival_time AS t
+  FROM trip_points t JOIN
+  ( SELECT service_id, MIN(date) AS date FROM service_dates GROUP BY service_id) s
+  ON t.service_id = s.service_id;
 
 /* 
  * Removing duplicate timestamps 
@@ -521,6 +555,20 @@ DELETE FROM trips_input WHERE
  AND ctid NOT IN (
   SELECT min(ctid)
   FROM trips_input
+  GROUP BY trip_id, t
+  HAVING count(*) > 1
+);
+
+DELETE FROM trips_input_classic WHERE
+ (trip_id, t) IN (
+  SELECT trip_id, t
+  FROM trips_input_classic
+  GROUP BY trip_id, t
+  HAVING count(*) > 1
+ )
+ AND ctid NOT IN (
+  SELECT min(ctid)
+  FROM trips_input_classic
   GROUP BY trip_id, t
   HAVING count(*) > 1
 );
@@ -544,6 +592,26 @@ INSERT INTO trips_mdb(trip_id, direction_id, service_id, route_id, date, trip)
   SELECT ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, date, tgeompointSeq(array_agg(tgeompoint(ti.point_geom, ti.t) ORDER BY T))
   FROM trips_input ti JOIN trips tr ON ti.trip_id = tr.trip_id
   GROUP BY ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, ti.date;
+
+
+CREATE TABLE trips_mdb_classic (
+  trip_id text NOT NULL,
+  direction_id text NOT NULL,
+  route_id text NOT NULL,
+  service_id text NOT NULL,
+  date date NOT NULL,
+  trip tgeompoint,
+  PRIMARY KEY (trip_id, date)
+);
+INSERT INTO trips_mdb_classic(trip_id, direction_id, service_id, route_id, date, trip)
+  SELECT ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, date, tgeompointSeq(array_agg(tgeompoint(ti.point_geom, ti.t) ORDER BY T))
+  FROM trips_input_classic ti JOIN trips tr ON ti.trip_id = tr.trip_id
+  GROUP BY ti.trip_id, tr.direction_id, ti.service_id, ti.route_id, ti.date;
+
+INSERT INTO trips_mdb_classic(trip_id, direction_id, service_id, route_id, date, trip)
+  SELECT trip_id, direction_id, t.service_id, route_id, d.date, shiftTime(trip, make_interval(days => d.date - t.date))
+  FROM trips_mdb_classic t JOIN service_dates d ON t.service_id = d.service_id AND t.date <> d.date;
+
 
 
 /* Day-style format 
@@ -705,15 +773,15 @@ UPDATE trips_mdb_week_shifted t
 -- INNER JOIN calendar c ON t.service_id = c.service_id
 -- WHERE trip_id = '116621908250654060';
 
-SELECT 
-  asText(anchor(
-      trip,
-      span((c.start_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', (c.end_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval),
-      '1 week'::interval,
-  false)) as anchor_trip
-FROM trips_mdb_week_shifted t
-INNER JOIN calendar c ON t.service_id = c.service_id
-WHERE trip_id = '116621908250654060';
+-- SELECT 
+--   asText(anchor(
+--       trip,
+--       span((c.start_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', (c.end_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval),
+--       '1 week'::interval,
+--   false)) as anchor_trip
+-- FROM trips_mdb_week_shifted t
+-- INNER JOIN calendar c ON t.service_id = c.service_id
+-- WHERE trip_id = '116621908250654060';
 
 
 \set ON_ERROR_STOP on
@@ -813,64 +881,6 @@ SELECT 100+1;
 -- ORDER BY getTimestamp(end_point) ASC
 -- LIMIT 10;
 
-
-SELECT 100+2;
-
-/* TRANSPORT FROM A TO B (DAY) */
-WITH args AS (
-  SELECT 
-    ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) AS artsloi,
-    ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) AS merode,
-    ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) AS delta,
-    '2019-11-04 12:30:00'::timestamptz AS test_ts_mon,
-    '2019-11-10 12:30:00'::timestamptz AS test_ts_sun
-), temp_near_trips AS (
-  SELECT DISTINCT
-    t.trip_id,
-    nearestApproachInstant(trip::tgeompoint, (select delta from args))::tgeogpoint AS start_point,
-    nearestApproachInstant(trip::tgeompoint, (select artsloi from args))::tgeogpoint AS end_point
-  FROM 
-    trips_mdb_day t
-  WHERE 
-    eDwithin((trip::tgeompoint)::tgeogpoint, (select delta from args)::geography, 300) -- start point
-    AND eDwithin((trip::tgeompoint)::tgeogpoint, (select artsloi from args)::geography, 300) -- destination
-), near_trips AS (
-  SELECT 
-    *
-  FROM 
-    temp_near_trips
-  WHERE 
-    getTimestamp(start_point) < getTimestamp(end_point)
-    AND start_point &&
-      span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz)
-), anchored_trips AS (
-  SELECT
-    t.trip_id,
-    anchor_array(
-      trip,
-      span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
-      '1 day'::interval,
-      true,
-      ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday],
-      (EXTRACT(DOW FROM c.start_date::timestamptz)::int + 6) % 7
-    ) as anchor_seq,
-    n.start_point,
-    n.end_point
-  FROM 
-    trips_mdb_day t
-    INNER JOIN near_trips n ON t.trip_id = n.trip_id
-    INNER JOIN calendar c ON t.service_id = c.service_id
-)
-SELECT 
-  trip_id, timeSpan(anchor_seq), asText(start_point), asText(end_point),
-  getTime(anchor_seq)
-FROM 
-  anchored_trips
-WHERE
-  anchor_seq IS NOT NULL
-  AND getTime(anchor_seq) && span((select test_ts_sun from args), (select test_ts_sun + '1 hour'::interval from args))
-ORDER BY getTimestamp(end_point) ASC
-LIMIT 10;
 
 
 

@@ -254,6 +254,57 @@ SELECT span(('2023-03-23' AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', ('
 
 
 
+SELECT span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz);
+
+
+SELECT 'CET';
+SELECT getTime(startSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-02-20, 2023-02-26)'::tstzspan, '1 day', true)));
+SELECT getTime(endSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-02-20, 2023-02-26)'::tstzspan, '1 day', true)));
+SELECT getTime(startSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-02-20, 2023-02-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+SELECT getTime(endSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-02-20, 2023-02-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+
+SELECT 'CEST';
+SELECT getTime(startSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-04-20, 2023-04-26)'::tstzspan, '1 day', true)));
+SELECT getTime(endSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-04-20, 2023-04-26)'::tstzspan, '1 day', true)));
+SELECT getTime(startSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-04-20, 2023-04-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+SELECT getTime(endSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-04-20, 2023-04-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+
+SELECT 'CET-CEST';
+SELECT getTime(startSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-20, 2023-04-26)'::tstzspan, '1 day', true)));
+SELECT getTime(endSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-20, 2023-04-26)'::tstzspan, '1 day', true)));
+SELECT getTime(startSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-20, 2023-04-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+SELECT getTime(endSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-20, 2023-04-26)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+
+SELECT 'PAPER';
+SELECT getTime(startSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-23, 2023-04-13)'::tstzspan, '1 day', true)));
+SELECT getTime(endSequence(anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-23, 2023-04-13)'::tstzspan, '1 day', true)));
+SELECT getTime(startSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-23, 2023-04-13)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+SELECT getTime(endSequence(anchor_array(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2023-03-23, 2023-04-13)'::tstzspan, '1 day', true, ARRAY[1,1,1,1,1,0,1])));
+
+SELECT 
+'{[2023-04-08 12:31:00+02, 2023-04-08 13:04:00+02]}'::tstzspanset
+&& 
+'[2023-04-03 12:30:00+02, 2023-04-03 14:00:00+02)'::tstzspan;
+
+SELECT 'START';
+
+WITH test AS (
+  SELECT 
+    tint('{[1@2023-03-26 13:15:00+02, 2@2023-03-26 13:45:00+02], [3@2023-04-02 13:15:00+02, 4@2023-04-02 13:45:00+02], [5@2023-04-09 13:15:00+02, 6@2023-04-09 13:45:00+02], [7@2023-04-16 13:15:00+02, 8@2023-04-16 13:45:00+02]}') as val0,
+    '{[2023-04-08 12:26:00+02, 2023-04-08 12:59:00+02]}'::tstzspanset as val1,
+    '[2023-04-03 12:30:00+02, 2023-04-03 14:00:00+02)'::tstzspan as val2
+)
+SELECT 
+  val1 && val2
+FROm test
+WHERE getTime(val0) && val2;
+
+SELECT 'END';
+
+
+ 
+
+
 -- \set ON_ERROR_STOP on
 -- DO $$ 
 -- BEGIN
