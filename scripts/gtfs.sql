@@ -1,84 +1,5 @@
 
-/** APPROACHES
-
-- isolate gtfs per trip, construct geometires, transform into mobilitydb etc.
-but do not join with calendar dates as those are repetitive
-
-- construct a repetition tree for mobilitydb trips that will simplify the storage / the size of the trips
-..but what about analysis them later?
-
-*/
-
-
-/** QUESTIONS
-
-- any reason to use intervals over timestamps for arrival times ?
-
-- can geometries, segments.. be different for each trip or are they always the same per service?
-if they are the same perhaps we can compute the geometry once per service rather than per trip
-* answer: geometires are per trips as some trips inside a service might be shorter or longer (e.g. return to warehouse)
-
-- do we really need to create segment point for mobilitydb? aren't stops and times sufficient? cannot mobilitydb interpolate those points itself?
-
-
-*/
-
-
-
-/** PROBLEMS (dates)
-
-- we have to get rid of EXCEPT calendar_dates (?) at least for now,
-  as our goal is to create a 1-week sequence that will repeat itself, not the full sequence
-  BUT still keep / build an exception list somewhere in order to filter results later 
-
-- instead of generating a series from start date to end date
-  generate a series from periodic monday to periodic sunday 
-  i.e. from 2000-01-01 to 2000-01-07 (included) (a priori it shouldnt matter that 01-01 is actually a saturday)
-
-- but what if start date is not a monday ?
-  what if it starts (start_date) at thursday and continues on monday etc. ?
-  -> don't generate series from start_date
-  start_date and end_dates will be important for anchoring and operations
-  here we only care about the monday to sunday pattern
-
-*/
-
-
-
-
-/** TODOS
-
-- trips_mdb contains (trip tgeompoint), transform into (trip pgeompoint)
-- requires tgeompointSeq -> quickly add a pgeompointSeq equivalent
-- trips_mdb stores : trip_id, service_id, route_id -> check if we can aggregate per service rather par each individual trip
-  answer: we can have multiple trips running concurrently so the answer is we do it per trip
-  -> should we do some sort of ([tripA1, ..., tripAi], timestamp) for each trip running simultanously?
-  -> e.g. if we want to check which trip is running the nearest to a certain point at a certain timestamp later in time? 
-  -> probably just group together per service + discard all not running at the given timestamp + check which is nearest amongst remaining
-
-*/
-
-
-/*
- * All of the above is probably already fixed or does not matter.
- */
-
-
-/*
-MARCH 2023 REFERENCE TRIP (route 60) (bus 71) (Mon-Fri)
-WHERE trip_id = '116621908250654060';
-
-WORKSHOP REFERENCE TRIP (Mon-Fri)
-WHERE trip_id = '106624048200039050'
-
-*/
-
-
-
 CREATE EXTENSION MobilityDB CASCADE;
-
-
-
 
 
 CREATE TABLE agency (
@@ -229,6 +150,7 @@ INSERT INTO pickup_dropoff_types (type_id, description) VALUES
 
 
 -- MARCH 2023 GTFS
+-------> TODO update paths with your owns
 COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
   FROM '/home/szymon/Master-Thesis/data/gtfs/calendar.txt' DELIMITER ',' CSV HEADER;
 COPY calendar_dates(service_id,date,exception_type)
@@ -245,19 +167,6 @@ COPY shapes(shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence)
   FROM '/home/szymon/Master-Thesis/data/gtfs/shapes.txt' DELIMITER ',' CSV HEADER;
 COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
   FROM '/home/szymon/Master-Thesis/data/gtfs/stops.txt' DELIMITER ',' CSV HEADER;
-
--- trip_id|116787795251469500
--- t|2000-01-06 08:04:00+01
--- count|2
-
--- trip_id|116787796251469500
--- t|2000-01-06 11:44:00+01
--- count|2
-
--- trip_id|116787797251469500
--- t|2000-01-06 12:30:00+01
--- count|2
-
 
 -- JULY 2024 GTFS
 -- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
@@ -277,17 +186,6 @@ COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_
 -- COPY stops(stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station)
 --   FROM '/home/szymon/Master-Thesis/data/other/gtfs75/stops.txt' DELIMITER ',' CSV HEADER;
 
--- trip_id|119297170261945501
--- t|2000-01-06 06:43:08+01
--- count|2
-
--- trip_id|119297171261945501
--- t|2000-01-06 08:49:55+01
--- count|2
-
--- trip_id|119297172261945501
--- t|2000-01-06 07:49:55+01
--- count|2
 
 -- WORKSHOP METRO 1 WEEK REDUCED GTFS
 -- COPY calendar(service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date) 
@@ -340,6 +238,7 @@ SELECT count(*)
 FROM calendar c JOIN trips t ON c.service_id = t.service_id;
 
 
+
 /* Transforming lon/lat point data into postGIS geometries */
 INSERT INTO shape_geoms
 SELECT 
@@ -354,7 +253,6 @@ GROUP BY shape_id;
 
 UPDATE stops
 SET stop_geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326);
-
 
 
 
@@ -658,7 +556,6 @@ SELECT trip_id, direction_id, service_id, route_id, date, setPeriodicType(trip::
 -- )
 -- SELECT count(*) FROM specific_trips;
 -- SELECT * FROM common_trips ORDER BY cnt DESC LIMIT 10;
-SELECT 2+2;
 
 
 
@@ -676,15 +573,6 @@ INSERT INTO trips_mdb_week("trip_id", "direction_id", "service_id", "route_id", 
     JOIN periodic_dates d
       ON t.service_id = d.service_id 
       AND t.date <> d.date;
-
-
--- SELECT date, asText(trip) FROM trips_mdb_week
--- WHERE trip_id = '116621908250654060' -- bus 71 (route 60)
--- ORDER BY date;
-
--- SELECT date, trip FROM trips_mdb_week
--- WHERE trip_id = '116621908250654060' -- bus 71 (route 60)
--- ORDER BY date;
 
 
 /*
@@ -726,291 +614,3 @@ UPDATE trips_mdb_week_shifted t
   FROM calendar c
   WHERE t.service_id = c.service_id;
 
-
-
-
-
-
--- WITH anchored_trips AS (
---   SELECT 
---     anchor(
---       trip,
---       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval, true, true),
---       '1 week'::interval,
---       false) as anchor_trip,
---     trip_id,
---     route_id,
---     direction_id,
---     numInstants(trip::tgeompoint) as numInstTrip,
---     c.start_date::timestamptz as sDate,
---     c.end_date::timestamptz as eDate
---   FROM trips_mdb_week_shifted t
---   INNER JOIN calendar c ON t.service_id = c.service_id
---   -- WHERE trip_id = '116621908250654060'
---   -- ORDER BY anchor_trip
--- ), repeating_trips AS (
---   SELECT 
---     route_id,trip_id,direction_id,
---     sDate, eDate,
---     asText(startInstant(anchor_trip)) as startInst,
---     asText(endInstant(anchor_trip)) as endInst,
---     numInstants(anchor_trip) as numInstAnchor,
---     numInstTrip
---   FROM anchored_trips
---   WHERE numInstants(anchor_trip) > numInstTrip
---   ORDER BY route_id, startInst
--- ) 
--- SELECT 90+9;
-
-
--- SELECT 
---   asText(anchor(
---       trip,
---       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
---       '1 week'::interval,
---   false)) as anchor_trip
--- FROM trips_mdb_week_shifted t
--- INNER JOIN calendar c ON t.service_id = c.service_id
--- WHERE trip_id = '116621908250654060';
-
--- SELECT 
---   asText(anchor(
---       trip,
---       span((c.start_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC', (c.end_date AT TIME ZONE 'Europe/Brussels') AT TIME ZONE 'UTC' + '1 day'::interval),
---       '1 week'::interval,
---   false)) as anchor_trip
--- FROM trips_mdb_week_shifted t
--- INNER JOIN calendar c ON t.service_id = c.service_id
--- WHERE trip_id = '116621908250654060';
-
-
-\set ON_ERROR_STOP on
-DO $$ 
-BEGIN
-   RAISE EXCEPTION 'Stopping execution here';
-END;
-$$ language plpgsql;
-
-
-
-/*****************************************************************************
- *  Transport related queries 
-*****************************************************************************/
-
--- todo do we want trips_mdb_day to always start at 'Monday' ? probably yeah
-
-/* Query
- * Quickest travel from A to B using public transport.
- * Idea:
- * - filter trips by start time period 
- * - filter by base trajectory (by proximity to point A and point B)
- * - check if when anchored to the given day the trip actually exists
- * - retrieve the nearest timestamp per line (warning difference must be >0)
- */
-
--- IMPORTANT
--- Les trajectoires ne commencent pas au point où on est. :p
--- Faut aussi embarquer au niveau d'un stop :p -> join avec les stops et match 
--- Faut checker dans une timestamp range et pas un =timestamp pour match le ts du départ
-
--- (ST_SetSRID(ST_MakePoint(-73.9857, 40.7484), 4326)), -- Point A
--- (ST_SetSRID(ST_MakePoint(-73.9851, 40.7486), 4326)); -- Point B
-
--- ST_DWithin(a.geom, b.geom, 100 / 111320.0) AS within_100m
-
--- startValue
--- endValue
-
-
-
-SELECT 100+1;
-
-/* TRANSPORT FROM A TO B (WEEK) todo todo */
--- WITH args AS (
---   SELECT 
---     ST_SetSRID(ST_MakePoint(4.372180396003406, 50.84722561466854), 4326) AS artsloi,
---     ST_SetSRID(ST_MakePoint(4.398234226769904, 50.83924650473654), 4326) AS merode,
---     ST_SetSRID(ST_MakePoint(4.403745097828254, 50.81836960981391), 4326) AS delta,
---     '2019-11-04 12:30:00'::timestamptz AS test_ts_mon,
---     '2019-11-10 12:30:00'::timestamptz AS test_ts_sun
--- ), temp_near_trips AS (
---   SELECT DISTINCT
---     t.trip_id,
---     nearestApproachInstant(trip::tgeompoint, (select delta from args))::tgeogpoint AS start_point,
---     nearestApproachInstant(trip::tgeompoint, (select artsloi from args))::tgeogpoint AS end_point
---   FROM 
---     trips_mdb_day t
---   WHERE 
---     eDwithin((trip::tgeompoint)::tgeogpoint, (select delta from args)::geography, 300) -- start point
---     AND eDwithin((trip::tgeompoint)::tgeogpoint, (select artsloi from args)::geography, 300) -- destination
--- ), near_trips AS (
---   SELECT 
---     *
---   FROM 
---     temp_near_trips
---   WHERE 
---     getTimestamp(start_point) < getTimestamp(end_point)
---     AND start_point &&
---       span('2000-01-01 12:00:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz)
--- ), anchored_trips AS (
---   SELECT
---     t.trip_id,
---     anchor_array(
---       trip,
---       span(c.start_date::timestamptz, c.end_date::timestamptz + '1 day'::interval),
---       '1 day'::interval,
---       true,
---       ARRAY[monday, tuesday, wednesday, thursday, friday, saturday, sunday],
---       (EXTRACT(DOW FROM c.start_date::timestamptz)::int + 6) % 7
---     ) as anchor_seq,
---     n.start_point,
---     n.end_point
---   FROM 
---     trips_mdb_day t
---     INNER JOIN near_trips n ON t.trip_id = n.trip_id
---     INNER JOIN calendar c ON t.service_id = c.service_id
--- )
--- SELECT 
---   trip_id, timeSpan(anchor_seq), asText(start_point), asText(end_point),
---   getTime(anchor_seq)
--- FROM 
---   anchored_trips
--- WHERE
---   anchor_seq IS NOT NULL
---   AND getTime(anchor_seq) && span((select test_ts_sun from args), (select test_ts_sun + '1 hour'::interval from args))
--- ORDER BY getTimestamp(end_point) ASC
--- LIMIT 10;
-
-
-
-
-
-/*****************************************************************************
- *  ARCHIVES
-*****************************************************************************/
-
-
-
--- SELECT distinct date
--- FROM trips_mdb
--- ORDER BY date ASC;
---     date
--- ------------
---  2000-01-01
---  2000-01-06
---  2000-01-07
-
--- SELECT trip
--- FROM trips_mdb
--- LIMIT 1;
--- SELECT getTime(trip) as ts
--- FROM trips_mdb
--- LIMIT 1;
--- ...
--- ts|{[2000-01-07 23:22:28+01, 2000-01-07 23:56:58+01]}
--- ts|{[2000-01-07 23:23:14+01, 2000-01-07 23:41:53+01]}
--- ts|{[2000-01-07 23:24:00+01, 2000-01-08 00:03:00+01]}
--- ts|{[2000-01-07 23:25:10+01, 2000-01-07 23:46:47+01]}
--- ts|{[2000-01-07 23:28:24+01, 2000-01-08 00:03:16+01]}
--- ts|{[2000-01-07 23:29:56+01, 2000-01-07 23:55:23+01]}
--- ...
---
--- FIXME: timestamps going over to 2000-01-08; > 1 week repetition
--- we could loop it and mark it as 2000-01-01, but then we would have 2000-01-07 < 2000-01-01 which can not happen
--- SOLUTION?
--- shift start time to 00:00:00; but then we would need to store additional shift else where, but it would be troublesome to compare periodics one to another
--- ACTUALLY
--- does it really matter that we have 2000-01-08?
--- if the start_time and end_time interval > 1 week we should be able to loop the sequence which is OK
--- IMPORTANT
--- 2000-01-01 00:00:00 is the reference point for anchoring, NOT for repeting the sequence; its reference is the first timestamp of the sequence
---
--- NOTE+FIXME:
--- shouldn't (/can) timestamps be in [2000-01-01, 2000-01-02] rather than [2000-01-01, 2000-01-08]?
-
-
--- SELECT distinct date
--- FROM trips_mdb
--- ORDER BY date ASC;
---     date
--- ------------
---  2000-01-01
---  2000-01-06
---  2000-01-07
---  2019-10-28
---  2019-10-29
---  2019-10-30
---  2019-10-31
---  2019-11-01
---  2019-11-02
---  2019-11-03
-
--- with temp_1 as (
---     select trip from trips_mdb limit 3
--- ), temp_2 as (
---     select (st_dump(geometry(shiftTime(trip,
---             localtime - (current_time at time zone 'utc')::time), true))).geom as geom
---     from temp_1
--- )
--- select
---     row_number() over () as id,
---     geom,
---     to_timestamp(st_m(st_startpoint(geom))) at time zone 'gmt' as start_t,
---     to_timestamp(st_m(st_endpoint(geom))) at time zone 'gmt' as end_t
--- from temp_2;
-
-
--- SELECT ST_Intersects('POINT(0 0)'::geometry, 'LINESTRING ( 0 0, 0 2 )'::geometry);
-
-
--- SELECT SRID(trip) FROM trips_mdb LIMIT 10; 
-
-
--- select *
--- from calendar_transformed
--- order by service_id
--- limit 1000;
-
--- SELECT *
--- FROM shape_geoms
--- ORDER BY shape_id
--- LIMIT 20;
-
--- SELECT * 
--- FROM stop_times 
--- ORDER BY trip_id, arrival_time
--- LIMIT 10;
-
-
--- Checks if there exist a seg_geom that is different for the same service_id but different trip_id
--- Answer: yes. For instance if the metro line 5 stop at delta (warehouse) to end its work day
--- SELECT *
--- FROM trip_segs t1 CROSS JOIN trip_segs t2
--- WHERE t1.service_id = t2.service_id
---   AND t1.trip_id != t2.trip_id
---   AND t1.stop1_sequence = t2.stop1_sequence
---   AND NOT ST_Equals(t1.seg_geom, t2.seg_geom)
--- ORDER BY t1.service_id, t1.trip_id
--- LIMIT 10;
-
-/*
-QUESTION, DO WE REALLY NEED TO CREATE THOSE SEGMENTED LINES FOR TEMPORALS? 
-ARENT (stop_id, arrival_time) SUFFICIENT FOR ANALYSIS ? (tint)
-I GUESS BOTH COULD WORK ?
-BUT WHAT IS THE ADVANTAGE OF USING LINE STRINGS DIRECTLY ?
-PERHAPS BY CREATING TEMPORALS, WE LOSE THE GEOGRAPHY INFORMATION?
-
-ACTUALLY. A DISADVENTAGE OF tint IS THAT WE CANNOT INTERPOLATE
-WHERAS IT IS POSSIBLE USING GEOMETRIES
-
-BUT, ARENT TRIP POINT SUFFICIENT IN THAT CASE ? DO WE REALLY WANT/NEED TO CREATE LINE SEGMENTS?
-MOREOVER, NOTE THAT THOSE LINES DONT (a priori) FOLLOW THE ACTUAL STREETS. 
-(perhaps they do, I don't know if this is already implemented in mobilitydb, investigate)
-WAIT
-BUT WE ARE GIVEN ROUTE SHAPES THAT ACTUALLY CONTAIN THOSE -> MAPPING TO STREETS IS NOT NEEDED
-THUS
-CANNOT WE JUST SOMEHOW DIVIDE THOSE ROUTE GEOMETRIES INTO SEGMENTS 
-RATHER THAN APPROXIMATELY CREATING SEGMENTS FROM JUST POINTS ?
--> that's what we do here, those are not approximate :D
-
-*/

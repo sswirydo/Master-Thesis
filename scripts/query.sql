@@ -1,10 +1,36 @@
+/*
+  Some random queries to check if all works as expected.
+*/
+
 
 CREATE EXTENSION IF NOT EXISTS mobilitydb CASCADE;
 
+
+SELECT pint('[10@2012-01-01 UTC, 12@2012-04-01 UTC, 12@2012-08-01 UTC)');
+SELECT pint('[10#2000-01-01 UTC, 12#2000-04-01 UTC, 12#2000-08-01 UTC)');
+SELECT pint('[10#2000-02-01 UTC, 12#2000-04-01 UTC, 12#2000-08-01 UTC)');
+-- SELECT pint('Periodic=Year;[10#Jan 05 08:00:00, 12#Feb 29 10:00:00, 12#Oct 01 12:00:00)'); -- deprecated
+-- SELECT pint('Periodic=Month;[10#03 08:00:00, 12#14 10:00:00, 12#31 12:00:00)'); -- deprecated
+-- SELECT pint('Periodic=Week;[10#Monday 08:00:00, 12#Tuesday 10:00:00, 16#Saturday 12:00:00)'); -- does not work because of ')'
+SELECT pint('Periodic=Week;[10#Monday 08:00:00, 12#Tuesday 10:00:00, 16#Saturday 12:00:00]'); 
+SELECT pint('Periodic=Day;[10#02:00:00, 12#10:00:00, 12#12:00:00, 12#13:00:00)');
+SELECT pint('Periodic=Interval;[10#0 days, 12#2 days 12 hours, 24#4 days 12 hours 30 minutes]');
+SELECT pint('Periodic=Interval;[1#0, 2#30days, 3#1 months 30 days, 4#2 months 30 days]');
+
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'day');
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:59:59 UTC)'), 'week');
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-08 00:00:00 CET)'), 'week');
+SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-07 23:59:59 CET)'), 'week');
+-- SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:59:59 UTC)'), 'month');
+-- SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-31 23:59:59 UTC)'), 'month');
+-- SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-02-01 00:00:00 UTC)'), 'month');
+-- SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2001-01-01 00:00:00 UTC)'), 'year');
+-- SELECT setPeriodicType(pint ('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-12-31 23:59:59 UTC)'), 'year');
+
 SELECT pmode('2 days', 10, true, '[2019-11-01, 2019-12-01]');
+SELECT pmode('60 minutes;103;true;[2019-11-01 14:00:00, 2019-12-01 15:00:00]');
 
 -- SELECT anchor(pint('[1#2000-01-01 UTC, 2#2000-01-02 UTC, 2#2000-01-03 UTC)'), pmode('2 days', 10, true, '[2019-11-01, 2019-12-01]'));
-
 
 SELECT tstzspanset '{[2001-01-01 08:00:00, 2001-01-01 08:10:00),
   [2001-01-01 08:10:00, 2001-01-01 08:10:00], (2001-01-01 08:10:00, 2001-01-01 08:20:00]}';
@@ -38,17 +64,17 @@ SELECT NoEmps FROM Department;
 SELECT 2+2;
 
 
-CREATE TABLE calendar_dates (
-  service_id text,
-  date date NOT NULL,
-  exception_type int
-);
-COPY calendar_dates(service_id,date,exception_type)
-  FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar_dates.txt' DELIMITER ',' CSV HEADER;
+-- CREATE TABLE calendar_dates (
+--   service_id text,
+--   date date NOT NULL,
+--   exception_type int
+-- );
+-- COPY calendar_dates(service_id,date,exception_type)
+--   FROM '/home/szymon/Master-Thesis/mobilitydb-workshop/calendar_dates.txt' DELIMITER ',' CSV HEADER;
 
 
-CREATE VIEW exceptions AS 
-  SELECT set(array_agg(c.date::timestamptz)) FROM calendar_dates c;
+-- CREATE VIEW exceptions AS 
+--   SELECT set(array_agg(c.date::timestamptz)) FROM calendar_dates c;
 
 CREATE VIEW points AS
   SELECT pgeompoint('[Point(0 0)#2000-01-01, 
@@ -105,13 +131,6 @@ SELECT tgeompoint '[Point(0 0)@2001-01-01, Point(1 1)@2001-01-02]' <-> tgeompoin
 SELECT valueAtTimestamp(tfloat '(20@2024-03-01, 25@2024-03-06, 30@2024-03-11]', '2024-03-03');
 SELECT tfloat '(20@2024-03-01, 25@2024-03-06, 30@2024-03-11]';
 
--- CREATE FUNCTION add_numbers(x integer, y integer)
--- RETURNS integer as $$ 
---     SELECT x + y; 
--- $$ LANGUAGE SQL; 
-
--- SELECT add_numbers(2, 2)
-
 
 SELECT asText(tgeompoint '[Point(0 0)@2024-01-01 10:00, Point(1 1)@2024-06-01 10:00]');
 
@@ -167,10 +186,9 @@ SELECT '[2019-11-01, 2019-12-01]'::tstzspan;
 SELECT span('2019-11-01'::timestamptz, '2019-12-01'::timestamptz, true, true)::tstzspan;
 
 -- SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 day', 20, true, '[2019-11-01, 2019-12-01]'::tstzspan));
-SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 20, true, '[2019-11-01, 2019-12-01]'::tstzspan));
-
-SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, true, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
-SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, false, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
+-- SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 20, true, '[2019-11-01, 2019-12-01]'::tstzspan));
+-- SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, true, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
+-- SELECT anchor_pmode(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), pmode('1 hour', 100, false, '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan));
 
 SELECT anchor(pint('Periodic=Day; [1#08:00:00, 2#08:30:00, 2#09:00:00)'), '[2019-11-01, 2019-11-01 13:45:00]'::tstzspan, '1 hour', true);
 
@@ -223,7 +241,6 @@ SELECT periodicValueAtTimestamp(
 
 -- SELECT tint '[1@2001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
 -- SELECT pint '[12001-01-01 08:00:00, 1@2001-01-03 08:00:00]';
-
 -- SELECT tgeompoint '[Point(0 0)@2017-01-01 08:00:00, Point(0 0)@2017-01-01 08:05:00)';
 -- SELECT pgeompoint '[Point(0 0)@2017-01-01 08:00:00, Point(0 0)@2017-01-01 08:05:00)';
 
@@ -300,9 +317,6 @@ FROm test
 WHERE getTime(val0) && val2;
 
 SELECT 'END';
-
-
- 
 
 
 -- \set ON_ERROR_STOP on

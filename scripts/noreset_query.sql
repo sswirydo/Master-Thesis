@@ -1,3 +1,7 @@
+/*
+  Queries on imported GTFS data notably, used for the thesis doc.
+*/
+
 
 SELECT mobilitydb_full_version();
 
@@ -12,51 +16,51 @@ SELECT mobilitydb_full_version();
 
 /* Number of trips per route in a day */
 
--- SELECT route_id, service_id, direction_id, count(*) as c
--- FROM trips_mdb_day
--- WHERE route_id = '60' and direction_id = '0'
--- GROUP BY route_id, service_id, direction_id
--- ORDER BY c DESC LIMIT 10;
+SELECT route_id, service_id, direction_id, count(*) as c
+FROM trips_mdb_day
+WHERE route_id = '60' and direction_id = '0'
+GROUP BY route_id, service_id, direction_id
+ORDER BY c DESC LIMIT 10;
 
 
 
 /* Average number of trips per route in a day */
 
--- SELECT 
---   AVG(total),
---   COUNT(service_id)
--- FROM 
--- (
---   SELECT service_id, count(*) as total
---   FROM trips_mdb_day
---   WHERE route_id = '60' and direction_id = '0'
---   GROUP BY route_id, service_id, direction_id
--- );
+SELECT 
+  AVG(total),
+  COUNT(service_id)
+FROM 
+(
+  SELECT service_id, count(*) as total
+  FROM trips_mdb_day
+  WHERE route_id = '60' and direction_id = '0'
+  GROUP BY route_id, service_id, direction_id
+);
 
 
 
 /* Checking the number of similar trips */
 
--- WITH aligned_trips AS (
---   SELECT 
---     startTimestamp(trip::tgeompoint) as starttime,
---     (periodic_align(trip))::tgeompoint AS altrip, 
---     trip_id, 
---     route_id,
---     direction_id,
---     service_id
---   FROM trips_mdb_day
--- ), common_trips AS (
---   SELECT 
---     span(MIN(starttime), MAX(starttime)) as timerange,
---     route_id, service_id, direction_id, 
---     duration(altrip), count(*) AS total
---   FROM aligned_trips
---   WHERE route_id = '60' AND direction_id = '0'
---   GROUP BY route_id, service_id, direction_id, altrip
---   HAVING count(*) > 1
--- )
--- SELECT count(*) as total FROM common_trips WHERE service_id = '250656500' GROUP BY route_id ORDER BY total DESC LIMIT 100;
+WITH aligned_trips AS (
+  SELECT 
+    startTimestamp(trip::tgeompoint) as starttime,
+    (periodic_align(trip))::tgeompoint AS altrip, 
+    trip_id, 
+    route_id,
+    direction_id,
+    service_id
+  FROM trips_mdb_day
+), common_trips AS (
+  SELECT 
+    span(MIN(starttime), MAX(starttime)) as timerange,
+    route_id, service_id, direction_id, 
+    duration(altrip), count(*) AS total
+  FROM aligned_trips
+  WHERE route_id = '60' AND direction_id = '0'
+  GROUP BY route_id, service_id, direction_id, altrip
+  HAVING count(*) > 1
+)
+SELECT count(*) as total FROM common_trips WHERE service_id = '250656500' GROUP BY route_id ORDER BY total DESC LIMIT 100;
 -- SELECT timerange, total FROM common_trips WHERE service_id = '250654060' ORDER BY total DESC LIMIT 100;
 -- SELECT timerange, total FROM common_trips ORDER BY timerange, total DESC LIMIT 10000;
 -- SELECT timerange, total FROM common_trips WHERE service_id = '250656500' ORDER BY timerange, total DESC LIMIT 10;
@@ -68,12 +72,59 @@ SELECT mobilitydb_full_version();
 
 /* Number of periodic vs. non-periodic rows */
 
--- SELECT count(*)
--- FROM trips_mdb_day;
--- SELECT count(*)
--- FROM trips_mdb_classic;
+VACUUM ANALYSE;
 
-\timing on
+SELECT 'trips_mdb_classic';
+SELECT count(*)
+FROM trips_mdb_classic;
+SELECT pg_size_pretty(pg_relation_size('trips_mdb_classic'));
+SELECT pg_size_pretty(pg_table_size('trips_mdb_classic'));
+SELECT pg_size_pretty (pg_total_relation_size ('trips_mdb_classic'));
+
+
+SELECT 'trips_mdb_week';
+SELECT count(*)
+FROM trips_mdb_week;
+SELECT pg_size_pretty(pg_relation_size('trips_mdb_week'));
+SELECT pg_size_pretty(pg_table_size('trips_mdb_week'));
+SELECT pg_size_pretty (pg_total_relation_size ('trips_mdb_week'));
+
+SELECT 'trips_mdb_day';
+SELECT count(*)
+FROM trips_mdb_day;
+SELECT pg_size_pretty(pg_relation_size('trips_mdb_day'));
+SELECT pg_size_pretty (pg_total_relation_size ('trips_mdb_day'));
+
+SELECT 'trips_mdb_grouped';
+DROP TABLE IF EXISTS trips_mdb_grouped;
+CREATE TABLE trips_mdb_grouped AS (
+  WITH aligned_trips AS (
+    SELECT trip_id, route_id, service_id, direction_id, (periodic_align(trip))::tgeompoint as altrip
+    FROM trips_mdb_day
+  )
+  SELECT MIN(trip_id), route_id, service_id, direction_id, altrip
+  FROM aligned_trips
+  GROUP BY route_id, service_id, direction_id, altrip
+);
+
+SELECT count(*)
+FROM trips_mdb_grouped;
+SELECT pg_size_pretty(pg_relation_size('trips_mdb_grouped'));
+SELECT pg_size_pretty (pg_total_relation_size ('trips_mdb_grouped'));
+
+SELECT 'trip_start_times';
+DROP TABLE IF EXISTS trip_start_times;
+CREATE TABLE trip_start_times AS (
+  SELECT trip_id, startTimestamp(trip::tgeompoint)
+  FROM trips_mdb_day
+);
+SELECT count(*)
+FROM trip_start_times;
+SELECT pg_size_pretty (pg_total_relation_size ('trip_start_times'));
+
+
+
+-- \timing on
 
 -- SELECT trip
 -- FROM trips_mdb_day
@@ -83,14 +134,12 @@ SELECT mobilitydb_full_version();
 /* TRANSPORT FROM A TO B (DAY) (PERIODIC) */
 /* -------------------------------------- */
 
--- VACUUM ANALYSE;
 
--- EXPLAIN ANALYSE
 
 -- SET enable_seqscan = off;
 
--- VACUUM ANALYSE;
-
+VACUUM ANALYSE;
+EXPLAIN ANALYSE
 WITH 
 args AS (
   SELECT 
@@ -108,7 +157,7 @@ args AS (
   AND ST_DWithin(shape_geom::geography, (select plaine from args)::geography, 500)
 )
 
-/* Filters to trips that are near start A end end B points */
+-- /* Filters to trips that are near start A end end B points */
 ,temp_near_trips AS (
   SELECT DISTINCT
     t.trip_id,
@@ -121,7 +170,7 @@ args AS (
     tr.shape_id IN (SELECT * FROM near_routes)
 )
 
-/* Fitlers to trips in a 30min range from current time */
+-- /* Fitlers to trips in a 30min range from current time */
 ,near_trips AS (
   SELECT *
   FROM temp_near_trips
@@ -131,7 +180,7 @@ args AS (
       span('2000-01-01 12:30:00 UTC'::timestamptz, '2000-01-01 13:00:00 UTC'::timestamptz)
 )
 
-/* Anchors and repeats the trips to actual dates  */
+-- /* Anchors and repeats the trips to actual dates  */
 , anchored_trips AS (
   SELECT
     t.trip_id, t.route_id, t.service_id,
@@ -153,7 +202,8 @@ args AS (
     INNER JOIN calendar c ON t.service_id = c.service_id
 )
 
-/* Selects */
+
+-- /* Selects */
 SELECT 
   trip_id, route_short_name, service_id,
   getTimestamp(start_point), getTimestamp(end_point)
@@ -169,8 +219,8 @@ ORDER BY getTimestamp(end_point) ASC;
 /* TRANSPORT FROM A TO B (DAY) (TEMPORAL) */
 /* -------------------------------------- */
 
--- VACUUM ANALYSE;
-
+VACUUM ANALYSE;
+EXPLAIN ANALYSE
 WITH 
 args AS (
   SELECT 
@@ -206,7 +256,7 @@ args AS (
   WHERE 
     getTimestamp(start_point) < getTimestamp(end_point)
     AND start_point &&
-      span('2023-04-03 12:30:00'::timestamptz, '2023-04-03 13:00:00'::timestamptz) 
+      span('2023-04-03 13:30:00'::timestamptz, '2023-04-03 14:00:00'::timestamptz) 
     -- note that we query 1 hour later as actually the classic GTFS approach also has issues related to DST changes :D  
 )
 
@@ -220,3 +270,12 @@ FROM
 ORDER BY getTimestamp(end_point) ASC;
 
 
+-- VACUUM ANALYSE;
+-- EXPLAIN ANALYSE
+-- SELECT periodicValueAtTimestamp(
+--   trip,
+--   span(c.start_date::timestamptz, c.end_date::timestamptz),
+--   '1 week'::interval,
+--   '2023-04-03 14:00:00'::timestamptz
+-- )
+-- FROM trips_mdb_week t JOIN calendar c ON t.service_id = c.service_id;
